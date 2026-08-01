@@ -1,58 +1,53 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus, Calendar, FileText, CheckCircle, Users } from "lucide-react"
+import { Calendar, FileText, CheckCircle, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useRole } from "@/components/role-provider"
+import { createClient } from "@/utils/supabase/server"
+import { CreateAssignmentDialog } from "./create-assignment-dialog"
 
-const assignments = [
-  {
-    id: "1",
-    title: "React Hooks Deep Dive",
-    description: "Build a custom hook for managing form state with validation.",
-    dueDate: "Tomorrow, 11:59 PM",
-    maxScore: 100,
-    submissions: 24,
-    totalStudents: 32,
-    status: "Active",
-  },
-  {
-    id: "2",
-    title: "CSS Grid Layout Masterclass",
-    description: "Create a complex dashboard layout using advanced CSS Grid techniques.",
-    dueDate: "Oct 28, 10:00 AM",
-    maxScore: 50,
-    submissions: 32,
-    totalStudents: 32,
-    status: "Completed",
-  },
-  {
-    id: "3",
-    title: "Next.js App Router Setup",
-    description: "Initialize a Next.js project with App Router and implement nested layouts.",
-    dueDate: "Nov 5, 11:59 PM",
-    maxScore: 100,
-    submissions: 5,
-    totalStudents: 32,
-    status: "Active",
-  }
-]
+export default async function AssignmentsPage() {
+  const supabase = await createClient()
 
-export default function AssignmentsPage() {
-  const { role } = useRole()
+  // Get current user and their DB role
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user?.id).single()
+  const role = profile?.role || 'student'
+
+  // Fetch total students count
+  const { count: totalStudents } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .eq('role', 'student')
+
+  // Fetch all assignments with their submission counts
+  const { data: assignmentsData } = await supabase
+    .from('assignments')
+    .select(`
+      *,
+      submissions (count)
+    `)
+    .order('due_date', { ascending: true })
+
+  const assignments = (assignmentsData || []).map((assignment: any) => {
+    const isPastDue = new Date(assignment.due_date) < new Date()
+    const status = isPastDue ? "Completed" : "Active"
+    
+    // In postgrest, a count join returns an array with one object { count: number }
+    const submissionsCount = assignment.submissions[0]?.count || 0
+
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      description: assignment.description,
+      dueDate: new Date(assignment.due_date).toLocaleString(undefined, {
+        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+      }),
+      maxScore: 100, // Hardcoded for now since DB lacks max_score
+      submissions: submissionsCount,
+      totalStudents: totalStudents || 0,
+      status: status,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6 relative min-h-[calc(100vh-8rem)]">
@@ -64,7 +59,7 @@ export default function AssignmentsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-20">
-        {assignments.map((assignment) => (
+        {assignments.length > 0 ? assignments.map((assignment) => (
           <Card key={assignment.id} className="flex flex-col hover:border-primary/50 transition-colors cursor-pointer group">
             <Link href={`/dashboard/assignments/${assignment.id}`} className="flex flex-col h-full">
               <CardHeader>
@@ -100,47 +95,15 @@ export default function AssignmentsPage() {
               </CardFooter>
             </Link>
           </Card>
-        ))}
+        )) : (
+          <div className="col-span-full text-center py-12 text-muted-foreground">
+            No assignments found.
+          </div>
+        )}
       </div>
 
-      {/* Floating Create Button & Dialog (Admin Only) */}
       {role === "admin" && (
-        <Dialog>
-          <div className="fixed bottom-8 right-8 z-50">
-            <DialogTrigger>
-              <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
-                <Plus className="h-5 w-5" />
-                Create Assignment
-              </Button>
-            </DialogTrigger>
-          </div>
-          
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create New Assignment</DialogTitle>
-              <DialogDescription>
-                Add a new assignment for your students. Fill out the details below.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Assignment Title</Label>
-                <Input id="title" placeholder="e.g., Buffer Overflow Lab" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="due-date">Due Date</Label>
-                <Input id="due-date" type="datetime-local" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="file">Upload Assignment (PDF)</Label>
-                <Input id="file" type="file" accept=".pdf" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">Create Assignment</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CreateAssignmentDialog />
       )}
     </div>
   )

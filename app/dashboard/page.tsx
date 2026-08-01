@@ -1,68 +1,108 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Activity, Award, BookOpen, Clock, Shield, Target, Trophy, Users } from "lucide-react"
+import { createClient } from "@/utils/supabase/server"
 
-// Mock Data
-const stats = [
-  {
-    title: "Global Rank",
-    value: "#42",
-    description: "Top 5% of all students",
-    icon: Trophy,
-    trend: "+3 positions this week"
-  },
-  {
-    title: "Total Points",
-    value: "2,450",
-    description: "Across 12 modules",
-    icon: Award,
-    trend: "+150 since last login"
-  },
-  {
-    title: "Active Modules",
-    value: "3",
-    description: "2 assignments pending",
-    icon: BookOpen,
-    trend: "1 due tomorrow"
-  },
-  {
-    title: "Hours Logged",
-    value: "128h",
-    description: "In cyber range",
-    icon: Clock,
-    trend: "+12h this week"
+function getInitials(name: string) {
+  if (!name) return "U"
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
+
+  // Fetch current user profile
+  let profile = null;
+  if (userId) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    profile = data
   }
-]
 
-const recentActivity = [
-  { id: 1, action: "Completed Module", target: "Network Reconnaissance", time: "2 hours ago", points: "+50", type: "success" },
-  { id: 2, action: "Submitted Report", target: "Vulnerability Assessment", time: "5 hours ago", points: "Pending", type: "neutral" },
-  { id: 3, action: "Earned Badge", target: "First Blood (Web Auth)", time: "1 day ago", points: "+100", type: "success" },
-  { id: 4, action: "Started Lab", target: "Privilege Escalation (Linux)", time: "2 days ago", points: "-", type: "neutral" },
-]
+  // Fetch leaderboard
+  const { data: studentsData } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'student')
+    .order('xp', { ascending: false })
+    
+  const students = studentsData || []
+  const leaderboard = students.slice(0, 5).map((s, index) => ({
+    rank: index + 1,
+    ...s,
+    isCurrentUser: s.id === userId
+  }))
 
-const leaderboard = [
-  { rank: 1, name: "Alice Smith", handle: "zer0day", points: 3100, avatar: "/avatars/01.png" },
-  { rank: 2, name: "Bob Jones", handle: "cyber_ninja", points: 2950, avatar: "/avatars/02.png" },
-  { rank: 3, name: "Charlie Brown", handle: "scriptkiddie", points: 2800, avatar: "/avatars/03.png" },
-  { rank: 4, name: "Diana Prince", handle: "amazon_sec", points: 2650, avatar: "/avatars/04.png" },
-  { rank: 5, name: "You", handle: "student_hacker", points: 2450, avatar: "/avatars/05.png", isCurrentUser: true },
-]
+  // Calculate current user rank
+  const myRank = students.findIndex(s => s.id === userId) + 1
 
-export default function DashboardPage() {
+  // Fetch recent submissions (as activity)
+  const { data: submissionsData } = await supabase
+    .from('submissions')
+    .select(`
+      id,
+      status,
+      score,
+      submitted_at,
+      assignments ( title )
+    `)
+    .eq('student_id', userId)
+    .order('submitted_at', { ascending: false })
+    .limit(5)
+
+  const recentActivity = (submissionsData || []).map((sub: any) => ({
+    id: sub.id,
+    action: sub.status === 'graded' ? "Graded Submission" : "Submitted Module",
+    target: sub.assignments?.title || "Unknown Assignment",
+    time: new Date(sub.submitted_at).toLocaleDateString(),
+    points: sub.score ? `+${sub.score}` : (sub.status === 'pending' ? 'Pending' : '-'),
+    type: sub.status === 'graded' ? 'success' : 'neutral'
+  }))
+
+  const stats = [
+    {
+      title: "Global Rank",
+      value: myRank > 0 ? `#${myRank}` : "N/A",
+      description: "Based on total XP",
+      icon: Trophy,
+      trend: "Keep going!"
+    },
+    {
+      title: "Total Points",
+      value: profile ? profile.xp.toLocaleString() : "0",
+      description: "Across all modules",
+      icon: Award,
+      trend: "Earn more XP"
+    },
+    {
+      title: "Active Modules",
+      value: "-",
+      description: "Work in progress",
+      icon: BookOpen,
+      trend: ""
+    },
+    {
+      title: "Hours Logged",
+      value: "-",
+      description: "In cyber range",
+      icon: Clock,
+      trend: ""
+    }
+  ]
+
   return (
     <div className="flex-1 space-y-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          {/* We can add a date picker or download report button here later */}
         </div>
       </div>
 
-      {/* KPI Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <Card key={index}>
@@ -86,7 +126,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Main Progress & Activity Area */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
@@ -96,7 +135,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {recentActivity.map((activity) => (
+              {recentActivity.length > 0 ? recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-center">
                   <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
                     {activity.type === 'success' ? <Award className="h-4 w-4 text-emerald-500" /> : <Activity className="h-4 w-4" />}
@@ -114,12 +153,13 @@ export default function DashboardPage() {
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-muted-foreground">No recent activity.</div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Mini Leaderboard / Status */}
         <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Top Operatives</CardTitle>
@@ -133,7 +173,7 @@ export default function DashboardPage() {
                 <TableRow>
                   <TableHead className="w-[50px]">Rank</TableHead>
                   <TableHead>Operative</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
+                  <TableHead className="text-right">XP</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -145,15 +185,15 @@ export default function DashboardPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                          <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium leading-none">{user.handle}</span>
+                          <span className="text-sm font-medium leading-none">{user.full_name || "Unknown"}</span>
                           {user.isCurrentUser && <span className="text-[10px] text-muted-foreground">You</span>}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-medium">{user.points}</TableCell>
+                    <TableCell className="text-right font-medium">{(user.xp || 0).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -162,12 +202,11 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Module Progress */}
       <Card>
         <CardHeader>
           <CardTitle>Current Path: Penetration Tester</CardTitle>
           <CardDescription>
-            You are 65% through the core curriculum.
+            Core curriculum progress.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

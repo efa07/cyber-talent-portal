@@ -1,61 +1,49 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Plus, Clock, HelpCircle, Award, RotateCcw, Play } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
+import { Clock, HelpCircle, Award, RotateCcw, Play } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { useRole } from "@/components/role-provider"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/server"
+import { CreateQuizDialog } from "./create-quiz-dialog"
 
-const quizzes = [
-  {
-    id: "1",
-    title: "JavaScript Fundamentals",
-    description: "Test your knowledge of JS variables, functions, and loops.",
-    questions: 15,
-    timeLimit: "30 mins",
-    totalMarks: 100,
-    attempts: 2,
-    status: "Active",
-  },
-  {
-    id: "2",
-    title: "React Components & State",
-    description: "Evaluate understanding of functional components and hooks.",
-    questions: 20,
-    timeLimit: "45 mins",
-    totalMarks: 100,
-    attempts: 1,
-    status: "Active",
-  },
-  {
-    id: "3",
-    title: "CSS Layouts (Flexbox & Grid)",
-    description: "Assessment on modern CSS layout techniques.",
-    questions: 10,
-    timeLimit: "20 mins",
-    totalMarks: 50,
-    attempts: 0,
-    status: "Completed",
+export default async function QuizzesPage() {
+  const supabase = await createClient()
+
+  // Get current user and their DB role
+  const { data: { user } } = await supabase.auth.getUser()
+  let role = 'student'
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile) role = profile.role
   }
-]
 
-export default function QuizzesPage() {
-  const { role } = useRole()
-  const router = useRouter()
+  // Fetch quizzes with question counts
+  const { data: quizzesData } = await supabase
+    .from('quizzes')
+    .select(`
+      *,
+      quiz_questions (count)
+    `)
+    .order('created_at', { ascending: false })
+
+  const quizzes = (quizzesData || []).map((quiz: any) => {
+    // Check if current user has reached max attempts
+    // In a real app we would query quiz_submissions, for now mock status
+    const status = "Active" 
+    const questionsCount = quiz.quiz_questions[0]?.count || 0
+    const totalMarks = questionsCount * 10 // Assuming 10 marks per question
+
+    return {
+      id: quiz.id,
+      title: quiz.title,
+      description: quiz.description,
+      questions: questionsCount,
+      timeLimit: `${quiz.time_limit_minutes} mins`,
+      totalMarks: totalMarks,
+      attempts: quiz.max_attempts,
+      status: status,
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6 relative min-h-[calc(100vh-8rem)]">
@@ -67,7 +55,7 @@ export default function QuizzesPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-20">
-        {quizzes.map((quiz) => (
+        {quizzes.length > 0 ? quizzes.map((quiz) => (
           <Card key={quiz.id} className="flex flex-col hover:border-primary/50 transition-colors group">
             <CardHeader>
               <div className="flex justify-between items-start mb-2">
@@ -113,55 +101,15 @@ export default function QuizzesPage() {
               </Link>
             </CardFooter>
           </Card>
-        ))}
+        )) : (
+          <div className="col-span-full text-center py-12 text-muted-foreground">
+            No quizzes found.
+          </div>
+        )}
       </div>
 
-      {/* Floating Create Button */}
       {role === "admin" && (
-        <Dialog>
-          <div className="fixed bottom-8 right-8 z-50">
-            <DialogTrigger>
-              <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
-                <Plus className="h-5 w-5" />
-                Create Quiz
-              </Button>
-            </DialogTrigger>
-          </div>
-          
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Create New Quiz</DialogTitle>
-              <DialogDescription>
-                Configure the settings for your new quiz.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Quiz Title</Label>
-                <Input id="title" placeholder="e.g., JavaScript Basics" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" placeholder="Brief description of the quiz..." />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="time-limit">Time Limit (mins)</Label>
-                  <Input id="time-limit" type="number" placeholder="30" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="attempts">Max Attempts</Label>
-                  <Input id="attempts" type="number" placeholder="1" />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => router.push("/dashboard/quizzes/builder")}>
-                Continue to Builder
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CreateQuizDialog />
       )}
     </div>
   )

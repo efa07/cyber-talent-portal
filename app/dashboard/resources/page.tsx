@@ -1,56 +1,71 @@
-"use client"
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { UploadCloud, FileText, Download, FileJson, FileCode2 } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
-import { useState } from "react"
+import { FileText, Download, FileJson, FileCode2, Link as LinkIcon, File } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useRole } from "@/components/role-provider"
+import { createClient } from "@/utils/supabase/server"
+import { ResourcesUpload } from "./resources-upload"
 
-const resources = [
-  { id: 1, title: "React Lifecycle Cheatsheet", type: "pdf", week: "Week 2", date: "Oct 15, 2026", size: "1.2 MB", icon: FileText, color: "text-red-500", bg: "bg-red-500/10" },
-  { id: 2, title: "Next.js App Router Guide", type: "docx", week: "Week 4", date: "Oct 22, 2026", size: "2.4 MB", icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-  { id: 3, title: "Tailwind CSS Utility Classes", type: "pdf", week: "Week 3", date: "Oct 18, 2026", size: "3.1 MB", icon: FileText, color: "text-red-500", bg: "bg-red-500/10" },
-  { id: 4, title: "TypeScript Interface Examples", type: "ts", week: "Week 5", date: "Oct 29, 2026", size: "45 KB", icon: FileCode2, color: "text-blue-600", bg: "bg-blue-600/10" },
-  { id: 5, title: "Mock Data JSON", type: "json", week: "Week 1", date: "Oct 05, 2026", size: "120 KB", icon: FileJson, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-]
+const iconMap: Record<string, any> = {
+  pdf: FileText,
+  docx: FileText,
+  ts: FileCode2,
+  json: FileJson,
+  link: LinkIcon,
+}
 
-export default function ResourcesPage() {
-  const { role } = useRole()
-  const [isDragging, setIsDragging] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
+const colorMap: Record<string, string> = {
+  pdf: "text-red-500",
+  docx: "text-blue-500",
+  ts: "text-blue-600",
+  json: "text-yellow-500",
+  link: "text-emerald-500",
+}
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
+const bgMap: Record<string, string> = {
+  pdf: "bg-red-500/10",
+  docx: "bg-blue-500/10",
+  ts: "bg-blue-600/10",
+  json: "bg-yellow-500/10",
+  link: "bg-emerald-500/10",
+}
+
+export default async function ResourcesPage() {
+  const supabase = await createClient()
+
+  // Get current user and their DB role
+  const { data: { user } } = await supabase.auth.getUser()
+  let role = 'student'
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile) role = profile.role
   }
 
-  const handleDragLeave = () => {
-    setIsDragging(false)
-  }
+  // Fetch resources
+  const { data: resourcesData } = await supabase
+    .from('resources')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    simulateUpload()
-  }
+  const resources = (resourcesData || []).map((resource) => {
+    // Determine type from resource_type
+    const type = resource.resource_type.toLowerCase()
+    const Icon = iconMap[type] || File
+    const color = colorMap[type] || "text-zinc-500"
+    const bg = bgMap[type] || "bg-zinc-500/10"
 
-  const simulateUpload = () => {
-    setIsUploading(true)
-    setUploadProgress(0)
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setTimeout(() => setIsUploading(false), 500)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
-  }
+    return {
+      id: resource.id,
+      title: resource.title,
+      type: type,
+      week: "Module Resource", // Mock week for now
+      date: new Date(resource.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+      size: "Unknown", // Real size would require storage API
+      icon: Icon,
+      color: color,
+      bg: bg,
+      url: resource.file_url
+    }
+  })
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,40 +79,11 @@ export default function ResourcesPage() {
       </div>
 
       {role === "admin" && (
-        <Card 
-          className={`border-2 border-dashed transition-colors ${
-            isDragging ? "border-primary bg-primary/5" : "border-border"
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <CardContent className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
-            <div className="p-4 bg-muted rounded-full">
-              <UploadCloud className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-semibold text-lg">Drag & drop files to upload</h3>
-              <p className="text-sm text-muted-foreground">Support for PDF, DOCX, ZIP, JSON, and TS files up to 50MB.</p>
-            </div>
-            
-            {isUploading ? (
-              <div className="w-full max-w-xs space-y-2">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Uploading file...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" />
-              </div>
-            ) : (
-              <Button variant="outline" onClick={simulateUpload}>Browse Files</Button>
-            )}
-          </CardContent>
-        </Card>
+        <ResourcesUpload />
       )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {resources.map((resource) => (
+        {resources.length > 0 ? resources.map((resource) => (
           <Card key={resource.id} className="hover:border-primary/50 transition-colors">
             <CardContent className="p-5 flex flex-col h-full">
               <div className="flex items-start justify-between mb-4">
@@ -117,12 +103,20 @@ export default function ResourcesPage() {
                   {resource.type.toUpperCase()} • {resource.size}
                 </p>
               </div>
-              <Button variant="secondary" className="w-full gap-2">
+              <Button 
+                variant="secondary" 
+                className="w-full gap-2" 
+                render={<a href={resource.url} target="_blank" rel="noopener noreferrer" />}
+              >
                 <Download className="h-4 w-4" /> Download
               </Button>
             </CardContent>
           </Card>
-        ))}
+        )) : (
+          <div className="col-span-full text-center py-12 text-muted-foreground">
+            No resources found.
+          </div>
+        )}
       </div>
     </div>
   )

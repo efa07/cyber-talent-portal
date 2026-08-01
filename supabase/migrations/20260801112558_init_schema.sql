@@ -174,3 +174,58 @@ CREATE POLICY "Students can insert own submissions" ON submissions FOR INSERT WI
 CREATE POLICY "Only admins can update submissions" ON submissions FOR UPDATE USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
+
+-- Create Announcements Table
+CREATE TABLE announcements (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('info', 'warning', 'success')),
+  author_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS for Announcements
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+-- Announcements Policies
+CREATE POLICY "Announcements are viewable by everyone" ON announcements FOR SELECT USING (true);
+CREATE POLICY "Only admins can insert announcements" ON announcements FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Only admins can update announcements" ON announcements FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Only admins can delete announcements" ON announcements FOR DELETE USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+-- Create Quiz Submissions Table
+CREATE TABLE quiz_submissions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  student_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  score INTEGER NOT NULL,
+  time_spent_seconds INTEGER NOT NULL,
+  submitted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS for Quiz Submissions
+ALTER TABLE quiz_submissions ENABLE ROW LEVEL SECURITY;
+
+-- Quiz Submissions Policies
+CREATE POLICY "Admins view all quiz submissions, students view own" ON quiz_submissions FOR SELECT USING (
+  auth.uid() = student_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "Students can insert own quiz submissions" ON quiz_submissions FOR INSERT WITH CHECK (
+  auth.uid() = student_id
+);
+
+
+-- Grant privileges to roles
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+

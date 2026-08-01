@@ -1,5 +1,3 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -23,17 +21,23 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
+import { createClient } from "@/utils/supabase/server"
+import Link from "next/link"
 
-const students = [
-  { id: "1", name: "Emma Watson", email: "emma.w@example.com", stars: 14, xp: 2450, rank: 1, status: "Active", initials: "EW" },
-  { id: "2", name: "Michael Johnson", email: "michael.j@example.com", stars: 12, xp: 2210, rank: 2, status: "Active", initials: "MJ" },
-  { id: "3", name: "Sarah Jenkins", email: "sarah.j@example.com", stars: 10, xp: 2150, rank: 3, status: "Inactive", initials: "SJ" },
-  { id: "4", name: "Alex Smith", email: "alex.s@example.com", stars: 9, xp: 1980, rank: 4, status: "Active", initials: "AS" },
-  { id: "5", name: "Jane Doe", email: "jane.d@example.com", stars: 8, xp: 1850, rank: 5, status: "Active", initials: "JD" },
-  { id: "6", name: "John Smith", email: "john.s@example.com", stars: 5, xp: 1200, rank: 12, status: "Active", initials: "JS" },
-]
+function getInitials(name: string) {
+  if (!name) return "U"
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+}
 
-export default function StudentsManagement() {
+export default async function StudentsManagement() {
+  const supabase = await createClient()
+  
+  const { data: students } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('role', 'student')
+    .order('xp', { ascending: false })
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -76,62 +80,72 @@ export default function StudentsManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback>{student.initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{student.name}</span>
-                        <span className="text-xs text-muted-foreground">{student.email}</span>
+              {students && students.length > 0 ? (
+                students.map((student, index) => (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{student.full_name || "Unknown"}</span>
+                          <span className="text-xs text-muted-foreground">{student.id.substring(0,8)}...</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {student.status === "Active" ? (
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className="text-success border-success">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">#{student.rank}</TableCell>
-                  <TableCell className="text-right font-mono">{student.xp.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                      <span>{student.stars}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" /> View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Award className="mr-2 h-4 w-4" /> Award Star
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" /> Edit Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash className="mr-2 h-4 w-4" /> Remove Student
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">#{index + 1}</TableCell>
+                    <TableCell className="text-right font-mono">{(student.xp || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                        <span>{student.stars || 0}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger 
+                          render={
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          } 
+                        />
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem 
+                            render={
+                              <Link href={`/dashboard/students/${student.id}`}>
+                                <Eye className="mr-2 h-4 w-4" /> View Profile
+                              </Link>
+                            }
+                          />
+                          <DropdownMenuItem>
+                            <Award className="mr-2 h-4 w-4" /> Award Star
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" /> Edit Details
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive">
+                            <Trash className="mr-2 h-4 w-4" /> Remove Student
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    No students found.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
 
@@ -145,12 +159,6 @@ export default function StudentsManagement() {
                   <PaginationLink href="#" isActive>1</PaginationLink>
                 </PaginationItem>
                 <PaginationItem>
-                  <PaginationLink href="#">2</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationLink href="#">3</PaginationLink>
-                </PaginationItem>
-                <PaginationItem>
                   <PaginationNext href="#" />
                 </PaginationItem>
               </PaginationContent>
@@ -161,3 +169,4 @@ export default function StudentsManagement() {
     </div>
   )
 }
+
