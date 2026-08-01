@@ -6,6 +6,19 @@ import { Plus, Clock, HelpCircle, Award, RotateCcw, Play } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useRole } from "@/components/role-provider"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useRouter } from "next/navigation"
 
 const quizzes = [
   {
@@ -42,6 +55,7 @@ const quizzes = [
 
 export default function QuizzesPage() {
   const { role } = useRole()
+  const router = useRouter()
 
   return (
     <div className="flex flex-col gap-6 relative min-h-[calc(100vh-8rem)]">
@@ -104,12 +118,50 @@ export default function QuizzesPage() {
 
       {/* Floating Create Button */}
       {role === "admin" && (
-        <div className="fixed bottom-8 right-8 z-50">
-          <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
-            <Plus className="h-5 w-5" />
-            Create Quiz
-          </Button>
-        </div>
+        <Dialog>
+          <div className="fixed bottom-8 right-8 z-50">
+            <DialogTrigger asChild>
+              <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
+                <Plus className="h-5 w-5" />
+                Create Quiz
+              </Button>
+            </DialogTrigger>
+          </div>
+          
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Quiz</DialogTitle>
+              <DialogDescription>
+                Configure the settings for your new quiz.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Quiz Title</Label>
+                <Input id="title" placeholder="e.g., JavaScript Basics" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" placeholder="Brief description of the quiz..." />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="time-limit">Time Limit (mins)</Label>
+                  <Input id="time-limit" type="number" placeholder="30" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="attempts">Max Attempts</Label>
+                  <Input id="attempts" type="number" placeholder="1" />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => router.push("/dashboard/quizzes/builder")}>
+                Continue to Builder
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )
