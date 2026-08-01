@@ -196,7 +196,7 @@ function GradeDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button size="sm">Grade</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

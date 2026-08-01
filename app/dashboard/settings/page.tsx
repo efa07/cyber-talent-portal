@@ -6,12 +6,9 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
-  const { setTheme, theme } = useTheme()
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full pt-4 md:pt-8">
@@ -84,59 +81,18 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Appearance</CardTitle>
-              <CardDescription>Customize how the dashboard looks on your device.</CardDescription>
+              <CardDescription>The dashboard now uses a polished light experience throughout.</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup defaultValue={theme} onValueChange={(val) => setTheme(val)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <RadioGroupItem value="light" id="light" className="peer sr-only" />
-                  <Label
-                    htmlFor="light"
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                  >
-                    <div className="w-full space-y-2">
-                      <div className="p-2 bg-[#ecf0f1] rounded-md h-20 w-full flex flex-col gap-2">
-                        <div className="h-4 w-1/3 bg-white rounded shadow-sm" />
-                        <div className="h-2 w-full bg-white rounded shadow-sm" />
-                        <div className="h-2 w-4/5 bg-white rounded shadow-sm" />
-                      </div>
-                      <span className="block w-full text-center font-medium">Light</span>
-                    </div>
-                  </Label>
+              <div className="rounded-xl border border-border bg-gradient-to-br from-white via-[#f8f9ff] to-[#eef2ff] p-4 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">Light mode is active</p>
+                    <p className="text-sm text-muted-foreground">This interface is optimized for clarity, focus, and a modern premium look.</p>
+                  </div>
+                  <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">Active</div>
                 </div>
-                <div>
-                  <RadioGroupItem value="dark" id="dark" className="peer sr-only" />
-                  <Label
-                    htmlFor="dark"
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                  >
-                    <div className="w-full space-y-2">
-                      <div className="p-2 bg-[#171923] rounded-md h-20 w-full flex flex-col gap-2 border border-zinc-800">
-                        <div className="h-4 w-1/3 bg-[#2A2D3A] rounded shadow-sm" />
-                        <div className="h-2 w-full bg-[#2A2D3A] rounded shadow-sm" />
-                        <div className="h-2 w-4/5 bg-[#2A2D3A] rounded shadow-sm" />
-                      </div>
-                      <span className="block w-full text-center font-medium">Dark</span>
-                    </div>
-                  </Label>
-                </div>
-                <div>
-                  <RadioGroupItem value="system" id="system" className="peer sr-only" />
-                  <Label
-                    htmlFor="system"
-                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                  >
-                    <div className="w-full space-y-2">
-                      <div className="p-2 bg-gradient-to-r from-[#ecf0f1] to-[#171923] rounded-md h-20 w-full flex flex-col gap-2">
-                        <div className="h-4 w-1/3 bg-white/50 rounded shadow-sm mix-blend-overlay" />
-                        <div className="h-2 w-full bg-white/50 rounded shadow-sm mix-blend-overlay" />
-                        <div className="h-2 w-4/5 bg-white/50 rounded shadow-sm mix-blend-overlay" />
-                      </div>
-                      <span className="block w-full text-center font-medium">System</span>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
