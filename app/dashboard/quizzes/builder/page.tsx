@@ -43,9 +43,9 @@ export default function QuizBuilderPage() {
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
         <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
         <p className="text-muted-foreground mb-4">You do not have permission to access the quiz builder.</p>
-        <Button asChild>
-          <Link href="/dashboard/quizzes">Return to Quizzes</Link>
-        </Button>
+        <Link href="/dashboard/quizzes">
+          <Button>Return to Quizzes</Button>
+        </Link>
       </div>
     )
   }
@@ -127,9 +127,11 @@ export default function QuizBuilderPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-10 bg-background/95 backdrop-blur py-4 border-b">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="rounded-full">
-            <Link href="/dashboard/quizzes"><ArrowLeft className="h-5 w-5" /></Link>
-          </Button>
+          <Link href="/dashboard/quizzes">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
           <div>
             <input 
               type="text" 

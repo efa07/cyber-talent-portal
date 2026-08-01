@@ -62,7 +62,7 @@ export default function AnnouncementsPage() {
           <p className="text-muted-foreground mt-1">Stay updated with the latest news and notices.</p>
         </div>
         <Dialog>
-          <DialogTrigger asChild>
+          <DialogTrigger>
             <Button className="gap-2">
               <Megaphone className="h-4 w-4" />
               New Announcement

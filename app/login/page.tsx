@@ -1,43 +1,98 @@
 "use client"
 
-import { LoginForm } from "@/components/login-form"
-import { Code2 } from "lucide-react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/client"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { BookOpen } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginPage() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+
+    router.push("/dashboard")
+    router.refresh()
+  }
+
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
-      <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex justify-center gap-2 md:justify-start">
-          <a href="#" className="flex items-center gap-2 font-medium">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Code2 className="size-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">Cyber Talent Room</span>
-          </a>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-sm">
-            <LoginForm />
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-md shadow-xl border-slate-100">
+        <CardHeader className="space-y-3 items-center text-center">
+          <div className="bg-violet-600 p-2 rounded-xl mb-2">
+            <BookOpen className="h-6 w-6 text-white" />
           </div>
-        </div>
-      </div>
-      <div className="relative hidden bg-zinc-950 lg:flex flex-col justify-between p-10 text-white overflow-hidden border-l border-border/40">
-        <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3" />
-        
-        <div className="relative z-10 flex items-center text-lg font-medium">
-          Programming Class LMS
-        </div>
-        
-        <div className="relative z-10">
-          <blockquote className="space-y-2">
-            <p className="text-lg text-zinc-300">
-              "Mastering code is not about writing commands. It's about crafting solutions."
-            </p>
-            <footer className="text-sm text-zinc-500">Instructor Dashboard</footer>
-          </blockquote>
-        </div>
-      </div>
+          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardDescription>Enter your credentials to access your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md font-medium">
+                {error}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@example.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="#" className="text-xs text-violet-600 font-medium hover:underline">Forgot password?</Link>
+              </div>
+              <Input 
+                id="password" 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="justify-center border-t p-4 mt-4">
+          <p className="text-sm text-slate-500">
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-violet-600 font-semibold hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

@@ -120,7 +120,7 @@ export default function QuizzesPage() {
       {role === "admin" && (
         <Dialog>
           <div className="fixed bottom-8 right-8 z-50">
-            <DialogTrigger asChild>
+            <DialogTrigger>
               <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
                 <Plus className="h-5 w-5" />
                 Create Quiz

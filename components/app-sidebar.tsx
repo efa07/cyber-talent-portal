@@ -83,7 +83,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton 
-                  asChild
                   className={`h-[48px] px-3 rounded-xl transition-all relative overflow-hidden ${
                     isActive 
                     ? "!bg-violet-50 text-violet-700 hover:!bg-violet-50 hover:text-violet-700" 
