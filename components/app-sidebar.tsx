@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useRole } from "@/components/role-provider"
 
 const adminNav = [
   { name: "Dashboard", url: "/dashboard/admin", icon: Home, hasArrow: false },
@@ -53,9 +54,7 @@ const studentNav = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  
-  // Mock role state for demonstration purposes
-  const [role, setRole] = React.useState<"admin" | "student">("admin")
+  const { role, setRole } = useRole()
   
   const navItems = role === "admin" ? adminNav : studentNav
 
@@ -84,6 +83,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton 
+                  asChild
                   className={`h-[48px] px-3 rounded-xl transition-all relative overflow-hidden ${
                     isActive 
                     ? "!bg-violet-50 text-violet-700 hover:!bg-violet-50 hover:text-violet-700" 
@@ -105,11 +105,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             )
           })}
         </SidebarMenu>
-
       </SidebarContent>
 
       <SidebarFooter className="p-5 bg-background pb-6">
         <div className="flex flex-col gap-5">
+          <button 
+            onClick={() => setRole(role === "admin" ? "student" : "admin")}
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 p-3 transition-colors hover:bg-slate-200 border border-slate-200 w-full text-slate-600 hover:text-slate-900"
+          >
+            <UserCircle className="h-4 w-4" />
+            <span className="text-[13px] font-medium">Viewing as: {role === "admin" ? "Admin" : "Student"}</span>
+          </button>
           
           <div className="flex items-center gap-3 px-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">

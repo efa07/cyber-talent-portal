@@ -6,6 +6,7 @@ import { UploadCloud, FileText, Download, FileJson, FileCode2 } from "lucide-rea
 import { Progress } from "@/components/ui/progress"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { useRole } from "@/components/role-provider"
 
 const resources = [
   { id: 1, title: "React Lifecycle Cheatsheet", type: "pdf", week: "Week 2", date: "Oct 15, 2026", size: "1.2 MB", icon: FileText, color: "text-red-500", bg: "bg-red-500/10" },
@@ -16,6 +17,7 @@ const resources = [
 ]
 
 export default function ResourcesPage() {
+  const { role } = useRole()
   const [isDragging, setIsDragging] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -55,40 +57,44 @@ export default function ResourcesPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Course Resources</h1>
-          <p className="text-muted-foreground mt-1">Upload and manage study materials.</p>
+          <p className="text-muted-foreground mt-1">
+            {role === "admin" ? "Upload and manage study materials." : "View and download study materials."}
+          </p>
         </div>
       </div>
 
-      <Card 
-        className={`border-2 border-dashed transition-colors ${
-          isDragging ? "border-primary bg-primary/5" : "border-border"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <CardContent className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
-          <div className="p-4 bg-muted rounded-full">
-            <UploadCloud className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-semibold text-lg">Drag & drop files to upload</h3>
-            <p className="text-sm text-muted-foreground">Support for PDF, DOCX, ZIP, JSON, and TS files up to 50MB.</p>
-          </div>
-          
-          {isUploading ? (
-            <div className="w-full max-w-xs space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Uploading file...</span>
-                <span>{uploadProgress}%</span>
-              </div>
-              <Progress value={uploadProgress} className="h-2" />
+      {role === "admin" && (
+        <Card 
+          className={`border-2 border-dashed transition-colors ${
+            isDragging ? "border-primary bg-primary/5" : "border-border"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <CardContent className="flex flex-col items-center justify-center py-10 space-y-4 text-center">
+            <div className="p-4 bg-muted rounded-full">
+              <UploadCloud className="h-8 w-8 text-muted-foreground" />
             </div>
-          ) : (
-            <Button variant="outline" onClick={simulateUpload}>Browse Files</Button>
-          )}
-        </CardContent>
-      </Card>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-lg">Drag & drop files to upload</h3>
+              <p className="text-sm text-muted-foreground">Support for PDF, DOCX, ZIP, JSON, and TS files up to 50MB.</p>
+            </div>
+            
+            {isUploading ? (
+              <div className="w-full max-w-xs space-y-2">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Uploading file...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            ) : (
+              <Button variant="outline" onClick={simulateUpload}>Browse Files</Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {resources.map((resource) => (

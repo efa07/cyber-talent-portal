@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Plus, Clock, HelpCircle, Award, RotateCcw, Play } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { useRole } from "@/components/role-provider"
 
 const quizzes = [
   {
@@ -40,6 +41,8 @@ const quizzes = [
 ]
 
 export default function QuizzesPage() {
+  const { role } = useRole()
+
   return (
     <div className="flex flex-col gap-6 relative min-h-[calc(100vh-8rem)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -100,12 +103,14 @@ export default function QuizzesPage() {
       </div>
 
       {/* Floating Create Button */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
-          <Plus className="h-5 w-5" />
-          Create Quiz
-        </Button>
-      </div>
+      {role === "admin" && (
+        <div className="fixed bottom-8 right-8 z-50">
+          <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
+            <Plus className="h-5 w-5" />
+            Create Quiz
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
