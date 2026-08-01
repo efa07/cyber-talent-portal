@@ -5,6 +5,17 @@ import { Button } from "@/components/ui/button"
 import { Plus, Calendar, FileText, CheckCircle, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const assignments = [
   {
@@ -89,13 +100,43 @@ export default function AssignmentsPage() {
         ))}
       </div>
 
-      {/* Floating Create Button */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
-          <Plus className="h-5 w-5" />
-          Create Assignment
-        </Button>
-      </div>
+      {/* Floating Create Button & Dialog */}
+      <Dialog>
+        <div className="fixed bottom-8 right-8 z-50">
+          <DialogTrigger asChild>
+            <Button size="lg" className="rounded-full shadow-lg h-14 px-6 gap-2">
+              <Plus className="h-5 w-5" />
+              Create Assignment
+            </Button>
+          </DialogTrigger>
+        </div>
+        
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Assignment</DialogTitle>
+            <DialogDescription>
+              Add a new assignment for your students. Fill out the details below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Assignment Title</Label>
+              <Input id="title" placeholder="e.g., Buffer Overflow Lab" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="due-date">Due Date</Label>
+              <Input id="due-date" type="datetime-local" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="file">Upload Assignment (PDF)</Label>
+              <Input id="file" type="file" accept=".pdf" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit">Create Assignment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

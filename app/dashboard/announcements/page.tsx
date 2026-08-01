@@ -5,6 +5,18 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pin, Megaphone, CalendarClock, MessageSquare } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 const announcements = [
   {
@@ -49,10 +61,35 @@ export default function AnnouncementsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Announcements</h1>
           <p className="text-muted-foreground mt-1">Stay updated with the latest news and notices.</p>
         </div>
-        <Button className="gap-2">
-          <Megaphone className="h-4 w-4" />
-          New Announcement
-        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              New Announcement
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Create Announcement</DialogTitle>
+              <DialogDescription>
+                Post a new announcement to the class. It will appear at the top of the feed.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" placeholder="e.g., Hackathon this weekend!" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea id="message" placeholder="Type your announcement here..." className="min-h-[140px]" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Post Announcement</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="relative border-l-2 border-muted ml-3 md:ml-6 space-y-8 pb-12">
@@ -82,7 +119,7 @@ export default function AnnouncementsPage() {
                 <CardTitle className="text-xl">{announcement.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
                   {announcement.content}
                 </p>
                 

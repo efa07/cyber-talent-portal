@@ -60,7 +60,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navItems = role === "admin" ? adminNav : studentNav
 
   return (
-    <Sidebar className="border-r border-border bg-background text-foreground w-[300px]" {...props}>
+    <Sidebar
+      style={{ "--sidebar-width": "18rem" } as React.CSSProperties}
+      className="border-r border-border bg-background text-foreground"
+      {...props}
+    >
       <SidebarHeader className="pt-8 pb-4 px-6 bg-background">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
@@ -102,47 +106,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           })}
         </SidebarMenu>
 
-        {role === "admin" && (
-          <>
-            <div className="h-px bg-border my-6 mx-2" />
-            <SidebarGroup className="px-2">
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-slate-500 mb-3 px-1 uppercase">
-                Quick Actions
-              </SidebarGroupLabel>
-              <div className="flex flex-col gap-3">
-                <button className="flex items-center gap-3 rounded-xl bg-white p-3 text-left transition-colors hover:bg-slate-50 border border-slate-200 shadow-sm">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white">
-                    <PlusCircle className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-medium text-slate-900">Create Assignment</span>
-                    <span className="text-[12px] text-slate-500 mt-0.5">Add a new assignment</span>
-                  </div>
-                </button>
-                <button className="flex items-center gap-3 rounded-xl bg-white p-3 text-left transition-colors hover:bg-slate-50 border border-slate-200 shadow-sm">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white">
-                    <FilePlus className="h-5 w-5" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[14px] font-medium text-slate-900">Upload Resource</span>
-                    <span className="text-[12px] text-slate-500 mt-0.5">Add study material</span>
-                  </div>
-                </button>
-              </div>
-            </SidebarGroup>
-          </>
-        )}
       </SidebarContent>
 
       <SidebarFooter className="p-5 bg-background pb-6">
         <div className="flex flex-col gap-5">
-          <button 
-            onClick={() => setRole(role === "admin" ? "student" : "admin")}
-            className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 transition-colors hover:bg-slate-50 border border-slate-200 shadow-sm w-full text-slate-600 hover:text-slate-900"
-          >
-            <UserCircle className="h-4 w-4" />
-            <span className="text-[13px] font-medium">Viewing as: {role === "admin" ? "Admin" : "Student"}</span>
-          </button>
           
           <div className="flex items-center gap-3 px-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
