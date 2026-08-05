@@ -201,38 +201,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Path: Penetration Tester</CardTitle>
-          <CardDescription>
-            Core curriculum progress.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium flex items-center gap-2"><Target className="h-4 w-4" /> Web Application Security</span>
-              <span className="text-muted-foreground">80%</span>
-            </div>
-            <Progress value={80} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium flex items-center gap-2"><Shield className="h-4 w-4" /> Network Penetration</span>
-              <span className="text-muted-foreground">45%</span>
-            </div>
-            <Progress value={45} className="h-2" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium flex items-center gap-2"><Users className="h-4 w-4" /> Social Engineering</span>
-              <span className="text-muted-foreground">0%</span>
-            </div>
-            <Progress value={0} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

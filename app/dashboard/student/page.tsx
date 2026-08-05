@@ -1,28 +1,71 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trophy, Star, TrendingUp, Calendar, FileText, Medal, CheckCircle2, Megaphone } from "lucide-react"
+import { Trophy, Star, TrendingUp, Calendar, FileText, Medal, CheckCircle2, Megaphone, Activity } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/server"
 
-export default function StudentDashboard() {
+function getInitials(name: string) {
+  if (!name) return "U"
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+}
+
+export default async function StudentDashboard() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return <div>Please log in to view your dashboard.</div>
+  }
+
+  // Fetch all required data in parallel
+  const [
+    profileRes,
+    studentsRes,
+    assignmentsRes,
+    announcementsRes,
+    resourcesRes,
+    quizRes
+  ] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase.from('profiles').select('id, xp').eq('role', 'student').order('xp', { ascending: false }),
+    supabase.from('assignments').select('*, submissions(*)').order('due_date', { ascending: true }).limit(5),
+    supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(3),
+    supabase.from('resources').select('*').order('created_at', { ascending: false }).limit(3),
+    supabase.from('quiz_submissions').select('*, quizzes(title)').eq('student_id', user.id).order('submitted_at', { ascending: false }).limit(3)
+  ])
+
+  const profile = profileRes.data
+  const allStudents = studentsRes.data || []
+  const rankIndex = allStudents.findIndex(s => s.id === user.id)
+  const rank = rankIndex !== -1 ? rankIndex + 1 : 0
+  const topPercent = allStudents.length > 0 ? Math.round((rank / allStudents.length) * 100) : 0
+  
+  const assignments = assignmentsRes.data || []
+  const announcements = announcementsRes.data || []
+  const resources = resourcesRes.data || []
+  const quizResults = quizRes.data || []
+
+  // Calculate average quiz score
+  const totalQuizScore = quizResults.reduce((acc, q) => acc + (q.score || 0), 0)
+  const avgQuizScore = quizResults.length > 0 ? Math.round(totalQuizScore / quizResults.length) : 0
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, Alex! 👋</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {profile?.full_name?.split(' ')[0] || 'Student'}! 👋</h1>
           <p className="text-muted-foreground mt-1">Here is what's happening in your class today.</p>
         </div>
         <div className="flex items-center gap-3 bg-zinc-100 dark:bg-zinc-800/50 p-2 rounded-lg">
           <Avatar className="h-10 w-10 border-2 border-primary">
-            <AvatarFallback>AS</AvatarFallback>
+            <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col pr-4">
-            <span className="text-sm font-bold">Level 12 Developer</span>
-            <span className="text-xs text-muted-foreground">2,450 XP Total</span>
+            <span className="text-sm font-bold capitalize">{profile?.role || 'Student'}</span>
+            <span className="text-xs text-muted-foreground">{(profile?.xp || 0).toLocaleString()} XP Total</span>
           </div>
         </div>
       </div>
@@ -35,8 +78,8 @@ export default function StudentDashboard() {
             <Trophy className="h-4 w-4 text-primary-foreground/80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4th Place</div>
-            <p className="text-xs text-primary-foreground/70 mt-1">Top 15% of class</p>
+            <div className="text-2xl font-bold">{rank > 0 ? `${rank}${['st','nd','rd'][((rank+90)%100-10)%10-1]||'th'} Place` : 'Unranked'}</div>
+            <p className="text-xs text-primary-foreground/70 mt-1">Top {topPercent}% of class</p>
           </CardContent>
         </Card>
         <Card>
@@ -45,9 +88,9 @@ export default function StudentDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,450</div>
-            <Progress value={65} className="h-2 mt-2" />
-            <p className="text-xs text-muted-foreground mt-2">150 XP to Level 13</p>
+            <div className="text-2xl font-bold">{(profile?.xp || 0).toLocaleString()}</div>
+            <Progress value={((profile?.xp || 0) % 1000) / 10} className="h-2 mt-2" />
+            <p className="text-xs text-muted-foreground mt-2">{1000 - ((profile?.xp || 0) % 1000)} XP to next level</p>
           </CardContent>
         </Card>
         <Card>
@@ -56,8 +99,8 @@ export default function StudentDashboard() {
             <Star className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">14</div>
-            <p className="text-xs text-muted-foreground mt-1">2 earned this week</p>
+            <div className="text-2xl font-bold">{profile?.stars || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">From excellent performance</p>
           </CardContent>
         </Card>
         <Card>
@@ -66,8 +109,8 @@ export default function StudentDashboard() {
             <Medal className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92%</div>
-            <p className="text-xs text-success mt-1">+2% from last week</p>
+            <div className="text-2xl font-bold">{avgQuizScore}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Based on {quizResults.length} recent quizzes</p>
           </CardContent>
         </Card>
       </div>
@@ -85,27 +128,34 @@ export default function StudentDashboard() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <Calendar className="h-9 w-9 p-2 bg-primary/10 text-primary rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">React Hooks Project</p>
-                  <p className="text-xs text-muted-foreground">Due Tomorrow, 11:59 PM</p>
+            {assignments.length > 0 ? assignments.map(assignment => {
+              const mySub = assignment.submissions?.find((s: any) => s.student_id === user.id)
+              const statusText = mySub ? (mySub.status === 'graded' ? 'Graded' : 'Pending Review') : 'Not Started'
+              const statusColor = mySub ? (mySub.status === 'graded' ? 'text-success border-success' : 'text-warning border-warning') : 'text-muted-foreground border-muted'
+              
+              return (
+                <div key={assignment.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <Calendar className="h-9 w-9 p-2 bg-primary/10 text-primary rounded-md" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">{assignment.title}</p>
+                      <p className="text-xs text-muted-foreground">Due: {new Date(assignment.due_date).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {mySub ? (
+                      <Badge variant="outline" className={statusColor}>{statusText}</Badge>
+                    ) : (
+                      <Link href={`/dashboard/assignments/${assignment.id}`}>
+                        <Button size="sm">Start</Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <Badge variant="outline" className="text-warning border-warning">In Progress</Badge>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-4">
-                <Calendar className="h-9 w-9 p-2 bg-primary/10 text-primary rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">CSS Grid Layout</p>
-                  <p className="text-xs text-muted-foreground">Due Friday, 10:00 AM</p>
-                </div>
-              </div>
-              <Button size="sm">Start</Button>
-            </div>
+              )
+            }) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">No upcoming assignments.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -116,24 +166,21 @@ export default function StudentDashboard() {
             <CardDescription>Latest updates from instructor.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Megaphone className="h-5 w-5 text-primary mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">Hackathon Weekend!</p>
-                <p className="text-xs text-muted-foreground">Join us this weekend for a 48-hour coding challenge. Extra XP for participants!</p>
-                <p className="text-[10px] text-muted-foreground pt-1">2 hours ago</p>
+            {announcements.length > 0 ? announcements.map(announcement => (
+              <div key={announcement.id} className="flex gap-3">
+                <Megaphone className={`h-5 w-5 mt-0.5 ${announcement.type === 'info' ? 'text-primary' : announcement.type === 'warning' ? 'text-warning' : 'text-success'}`} />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">{announcement.title}</p>
+                  <p className="text-xs text-muted-foreground">{announcement.content}</p>
+                  <p className="text-[10px] text-muted-foreground pt-1">{new Date(announcement.created_at).toLocaleDateString()}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <Megaphone className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium leading-none">Assignment 3 Grades Posted</p>
-                <p className="text-xs text-muted-foreground">Check your assignment page for feedback.</p>
-                <p className="text-[10px] text-muted-foreground pt-1">Yesterday</p>
-              </div>
-            </div>
+            )) : (
+              <div className="text-sm text-muted-foreground text-center py-4">No announcements yet.</div>
+            )}
           </CardContent>
         </Card>
+        
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
@@ -149,26 +196,24 @@ export default function StudentDashboard() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 p-1.5 bg-red-500/10 text-red-500 rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">React Lifecycle Cheatsheet</p>
-                  <p className="text-xs text-muted-foreground">PDF • 1.2 MB</p>
+            {resources.length > 0 ? resources.map(resource => (
+              <div key={resource.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-8 w-8 p-1.5 bg-blue-500/10 text-blue-500 rounded-md" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">{resource.title}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{resource.resource_type}</p>
+                  </div>
                 </div>
+                {resource.file_url && resource.file_url !== '#' && (
+                  <a href={resource.file_url} target="_blank" rel="noopener noreferrer" download>
+                    <Button variant="ghost" size="sm">Download</Button>
+                  </a>
+                )}
               </div>
-              <Button variant="ghost" size="sm">Download</Button>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 p-1.5 bg-blue-500/10 text-blue-500 rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Next.js App Router Guide</p>
-                  <p className="text-xs text-muted-foreground">DOCX • 2.4 MB</p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm">Download</Button>
-            </div>
+            )) : (
+              <div className="text-sm text-muted-foreground text-center py-4">No resources available.</div>
+            )}
           </CardContent>
         </Card>
 
@@ -184,26 +229,20 @@ export default function StudentDashboard() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-8 w-8 p-1.5 bg-success/20 text-success rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">JavaScript Basics Quiz</p>
-                  <p className="text-xs text-muted-foreground">Completed: Oct 24 • +100 XP</p>
+            {quizResults.length > 0 ? quizResults.map(result => (
+              <div key={result.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className={`h-8 w-8 p-1.5 rounded-md ${(result.score || 0) >= 70 ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`} />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium leading-none">{result.quizzes?.title || 'Quiz'}</p>
+                    <p className="text-xs text-muted-foreground">Completed: {new Date(result.submitted_at).toLocaleDateString()}</p>
+                  </div>
                 </div>
+                <div className={`text-xl font-bold ${(result.score || 0) >= 70 ? 'text-success' : 'text-warning'}`}>{result.score}%</div>
               </div>
-              <div className="text-xl font-bold text-success">100%</div>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-8 w-8 p-1.5 bg-warning/20 text-warning rounded-md" />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">CSS Selectors Quiz</p>
-                  <p className="text-xs text-muted-foreground">Completed: Oct 20 • +85 XP</p>
-                </div>
-              </div>
-              <div className="text-xl font-bold text-warning">85%</div>
-            </div>
+            )) : (
+              <div className="text-sm text-muted-foreground text-center py-4">No recent quiz results.</div>
+            )}
           </CardContent>
         </Card>
       </div>
