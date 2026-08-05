@@ -156,45 +156,6 @@ export default function AssignmentDetailsPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Submissions</CardTitle>
-          <CardDescription>Review and grade submitted assignments.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Submitted At</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>JD</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-sm">Jane Doe</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">Today, 10:23 AM</TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="bg-warning/10 text-warning hover:bg-warning/20 border-warning/20">Needs Grading</Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">-- / 100</TableCell>
-                <TableCell className="text-right">
-                  <GradeDialog />
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   )
 }
