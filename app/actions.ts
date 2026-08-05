@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/utils/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
 export async function createAssignment(formData: FormData) {
@@ -18,19 +19,28 @@ export async function createAssignment(formData: FormData) {
 
   // Handle file upload to Supabase Storage if a file was provided
   const file = formData.get('file') as File | null
-  if (file && (file as any).size > 0) {
+  if (file && file.size > 0) {
     try {
-      const fileName = `${Date.now()}-${(file as any).name}`
+      const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const fileName = `${Date.now()}-${file.name}`
       const filePath = `assignments/${fileName}`
-      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, file, {
+      
+      const fileBuffer = await file.arrayBuffer()
+      
+      const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
         upsert: false,
+        contentType: file.type
       })
 
       if (uploadError) {
         console.error('Error uploading file to storage:', uploadError)
         // fallback to placeholder
       } else {
-        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath, { download: true })
+        const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
         fileUrl = publicData?.publicUrl || fileUrl
       }
     } catch (e) {
@@ -69,18 +79,27 @@ export async function updateAssignment(formData: FormData) {
   const description = (formData.get("description") as string) || ""
   let fileUrl = undefined
   const file = formData.get('file') as File | null
-  if (file && (file as any).size > 0) {
+  if (file && file.size > 0) {
     try {
-      const fileName = `${Date.now()}-${(file as any).name}`
+      const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const fileName = `${Date.now()}-${file.name}`
       const filePath = `assignments/${fileName}`
-      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, file, {
+      
+      const fileBuffer = await file.arrayBuffer()
+      
+      const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
         upsert: false,
+        contentType: file.type
       })
 
       if (uploadError) {
         console.error('Error uploading file to storage:', uploadError)
       } else {
-        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath, { download: true })
+        const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
         fileUrl = publicData?.publicUrl
       }
     } catch (e) {
