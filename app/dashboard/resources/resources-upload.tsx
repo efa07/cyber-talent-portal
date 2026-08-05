@@ -53,6 +53,7 @@ export function ResourcesUpload() {
     // Finished uploading, now call server action
     const formData = new FormData()
     formData.append("title", file.name)
+    formData.append("file", file)
     
     startTransition(async () => {
       try {

@@ -162,10 +162,41 @@ export async function createResource(formData: FormData) {
   }
 
   const title = formData.get("title") as string || "Uploaded Resource"
-  const fileUrl = "#" // Mock until storage is setup
+  let fileUrl = "#"
+  let resourceType = "pdf"
+
+  const file = formData.get('file') as File | null
   
-  // We'll just randomly assign a type for mock purposes based on the file name or default to pdf
-  const resourceType = "pdf"
+  if (file && file.size > 0) {
+    try {
+      const supabaseAdmin = createSupabaseClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      const fileName = `${Date.now()}-${file.name}`
+      const filePath = `resources/${fileName}`
+      
+      const fileBuffer = await file.arrayBuffer()
+      
+      const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
+        upsert: false,
+        contentType: file.type
+      })
+
+      if (uploadError) {
+        console.error('Error uploading resource:', uploadError)
+      } else {
+        const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
+        fileUrl = publicData?.publicUrl || "#"
+      }
+      
+      const ext = file.name.split('.').pop()?.toLowerCase()
+      if (ext) resourceType = ext
+    } catch(e) {
+      console.error('File upload exception:', e)
+    }
+  }
 
   const { error } = await supabase.from('resources').insert({
     title,
@@ -369,4 +400,76 @@ export async function gradeSubmission(formData: FormData) {
 
   revalidatePath(`/dashboard/assignments/${assignmentId}`)
   return { success: true }
+}
+
+export async function submitQuiz(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const quizId = formData.get("quiz_id") as string
+  const answersRaw = formData.get("answers") as string
+  if (!quizId || !answersRaw) throw new Error("Missing data")
+  
+  let userAnswers: Record<string, string> = {}
+  try {
+    userAnswers = JSON.parse(answersRaw)
+  } catch (e) {
+    throw new Error("Invalid answers format")
+  }
+
+  // Fetch the actual questions to grade it securely on the server
+  const { data: questions } = await supabase
+    .from('quiz_questions')
+    .select('*')
+    .eq('quiz_id', quizId)
+
+  if (!questions) throw new Error("Could not load questions")
+
+  let correctCount = 0
+  const totalCount = questions.length
+
+  questions.forEach(q => {
+    const correctOption = q.options[q.correct_option_index]
+    const userAnswerText = userAnswers[q.id]
+    if (correctOption && correctOption.text === userAnswerText) {
+      correctCount++
+    }
+  })
+
+  const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
+
+  // Insert submission
+  const { error } = await supabase.from('quiz_submissions').insert({
+    quiz_id: quizId,
+    student_id: user.id,
+    score: score,
+    answers: userAnswers
+  })
+
+  if (error) {
+    console.error("Error submitting quiz:", error)
+    throw new Error("Failed to submit quiz")
+  }
+
+  // Award XP based on score
+  try {
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', user.id).single()
+    if (profile) {
+      await supabaseAdmin.from('profiles').update({ xp: profile.xp + score }).eq('id', user.id)
+    }
+  } catch (e) {
+    console.error("Failed to award XP", e)
+  }
+
+  revalidatePath(`/dashboard/quizzes/${quizId}`)
+  revalidatePath('/dashboard/student')
+  return { success: true, score }
 }
