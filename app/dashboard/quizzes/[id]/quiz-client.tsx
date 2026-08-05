@@ -53,6 +53,7 @@ export function QuizClient({ quiz, questions }: { quiz: any, questions: any[] })
         const formData = new FormData()
         formData.append("quiz_id", quiz.id)
         formData.append("answers", JSON.stringify(answers))
+        formData.append("time_spent", ((quiz.time_limit_minutes || 30) * 60 - timeLeft).toString())
         
         // This action needs to be created or we just redirect
         await submitQuiz(formData)
@@ -112,7 +113,7 @@ export function QuizClient({ quiz, questions }: { quiz: any, questions: any[] })
                 />
                 <Label
                   htmlFor={`q-${question.id}-opt-${index}`}
-                  className="flex flex-1 items-center justify-between rounded-xl border-2 border-muted bg-transparent p-4 hover:bg-muted peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+                  className="flex flex-1 items-center justify-between rounded-xl border-2 border-muted bg-transparent p-4 hover:bg-muted peer-data-[state=checked]:border-green-500 peer-data-[state=checked]:bg-green-500/20 cursor-pointer transition-all"
                 >
                   <span className="text-base font-medium">{option.text}</span>
                 </Label>

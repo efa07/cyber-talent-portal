@@ -441,13 +441,14 @@ export async function submitQuiz(formData: FormData) {
   })
 
   const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
+  const timeSpent = parseInt(formData.get("time_spent") as string, 10) || 300
 
   // Insert submission
   const { error } = await supabase.from('quiz_submissions').insert({
     quiz_id: quizId,
     student_id: user.id,
     score: score,
-    answers: userAnswers
+    time_spent_seconds: timeSpent
   })
 
   if (error) {
