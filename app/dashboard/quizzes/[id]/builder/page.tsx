@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Plus, Trash2, CheckCircle2, Circle, ArrowLeft, Save, GripVertical } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, Circle, ArrowLeft, Save, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useRole } from "@/components/role-provider"
+import { saveQuizQuestions } from "@/app/actions"
+import { useParams, useRouter } from "next/navigation"
 
 type Option = {
   id: string
@@ -24,8 +26,13 @@ type Question = {
 }
 
 export default function QuizBuilderPage() {
+  const params = useParams()
+  const router = useRouter()
+  const quizId = params.id as string
+
   const { role } = useRole()
   const [quizTitle, setQuizTitle] = useState("New Quiz")
+  const [isSaving, setIsSaving] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: "q1",
@@ -37,6 +44,19 @@ export default function QuizBuilderPage() {
       ]
     }
   ])
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await saveQuizQuestions(quizId, quizTitle, questions)
+      router.push('/dashboard/quizzes')
+    } catch (error) {
+      console.error(error)
+      // Normally we'd show a toast here
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (role !== "admin") {
     return (
@@ -143,8 +163,9 @@ export default function QuizBuilderPage() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline">Preview</Button>
-          <Button className="gap-2">
-            <Save className="h-4 w-4" /> Save Quiz
+          <Button className="gap-2" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSaving ? 'Saving...' : 'Save Quiz'}
           </Button>
         </div>
       </div>

@@ -17,27 +17,65 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useState } from "react"
+import { useState, useEffect, useTransition } from "react"
 import { use } from "react"
+import { createClient } from "@/utils/supabase/client"
+import { updateAssignment } from "@/app/actions"
+
+function formatDateForInput(dateStr?: string) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const YYYY = d.getFullYear()
+  const MM = pad(d.getMonth() + 1)
+  const DD = pad(d.getDate())
+  const hh = pad(d.getHours())
+  const mm = pad(d.getMinutes())
+  return `${YYYY}-${MM}-${DD}T${hh}:${mm}`
+}
 
 export default function AssignmentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params)
+  const [assignment, setAssignment] = useState<any | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    const load = async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase.from('assignments').select('*').eq('id', unwrappedParams.id).single()
+      if (error) {
+        console.error('Failed to load assignment', error)
+        return
+      }
+      setAssignment(data)
+    }
+
+    load()
+  }, [unwrappedParams.id])
+
   
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <Badge>Active</Badge>
+            <Badge>{assignment ? (new Date(assignment.due_date) < new Date() ? 'Completed' : 'Active') : 'Loading'}</Badge>
             <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-4 w-4" /> Due Tomorrow, 11:59 PM
+              <Calendar className="h-4 w-4" /> {assignment ? new Date(assignment.due_date).toLocaleString() : '—'}
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">React Hooks Deep Dive</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{assignment?.title || 'Loading...'}</h1>
           <p className="text-muted-foreground mt-1">Assignment ID: {unwrappedParams.id} • Max Score: 100 pts</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Edit Assignment</Button>
+          <EditAssignmentDialog assignment={assignment} onSaved={async () => {
+            startTransition(async () => {
+              const supabase = createClient()
+              const { data } = await supabase.from('assignments').select('*').eq('id', unwrappedParams.id).single()
+              setAssignment(data)
+            })
+          }} />
           <Button>Download All Submissions</Button>
         </div>
       </div>
@@ -49,37 +87,43 @@ export default function AssignmentDetailsPage({ params }: { params: Promise<{ id
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm leading-relaxed">
-                In this assignment, you will build a custom React Hook for managing form state with validation.
-                The hook should be generic enough to handle different types of inputs (text, email, password) and 
-                support complex validation rules.
-              </p>
-              <h4 className="font-medium mt-4">Requirements:</h4>
-              <ul className="list-disc pl-5 text-sm space-y-2 text-muted-foreground">
-                <li>Create a <code>useForm</code> hook that accepts initial state and validation schema.</li>
-                <li>Implement <code>onChange</code> and <code>onSubmit</code> handlers.</li>
-                <li>Support error state management per field.</li>
-                <li>Write at least 3 unit tests for your hook.</li>
-              </ul>
+              <p className="text-sm leading-relaxed">{assignment?.description || 'Loading description...'}</p>
+              {assignment && (
+                <>
+                  <h4 className="font-medium mt-4">Requirements:</h4>
+                  <ul className="list-disc pl-5 text-sm space-y-2 text-muted-foreground">
+                    <li>Follow the assignment description.</li>
+                    <li>Submit using the submission form before the due date.</li>
+                  </ul>
+                </>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Attachments</CardTitle>
+              <CardTitle> </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between p-3 rounded-lg border bg-card">
                 <div className="flex items-center gap-3">
                   <FileText className="h-8 w-8 p-1.5 bg-blue-500/10 text-blue-500 rounded-md" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">starter-template.zip</p>
-                    <p className="text-xs text-muted-foreground">ZIP • 2.4 MB</p>
+                    <p className="text-sm font-medium leading-none">{assignment?.file_url ? assignment.file_url.split('/').pop() : 'No attachment'}</p>
+                    <p className="text-xs text-muted-foreground">{assignment?.file_url ? 'Uploaded file' : ''}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon">
-                  <Download className="h-4 w-4" />
-                </Button>
+                {assignment?.file_url && assignment.file_url !== '#' ? (
+                  <a href={assignment.file_url} target="_blank" rel="noopener noreferrer" download>
+                    <Button variant="ghost" size="icon">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="ghost" size="icon" disabled>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -147,47 +191,66 @@ export default function AssignmentDetailsPage({ params }: { params: Promise<{ id
                   <GradeDialog />
                 </TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>AS</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-sm">Alex Smith</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">Yesterday, 4:45 PM</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-success border-success">Graded</Badge>
-                </TableCell>
-                <TableCell className="font-medium">95 / 100</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm">Edit Grade</Button>
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>MJ</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-sm">Michael Johnson</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">--</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-muted-foreground border-border">Missing</Badge>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">-- / 100</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" disabled>Grade</Button>
-                </TableCell>
-              </TableRow>
             </TableBody>
           </Table>
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function EditAssignmentDialog({ assignment, onSaved }: { assignment: any, onSaved?: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  async function action(formData: FormData) {
+    startTransition(async () => {
+      try {
+        await updateAssignment(formData)
+        setOpen(false)
+        if (onSaved) await onSaved()
+      } catch (e) {
+        console.error(e)
+      }
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger>
+        <Button variant="outline">Edit Assignment</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Assignment</DialogTitle>
+          <DialogDescription>Update assignment details.</DialogDescription>
+        </DialogHeader>
+        <form action={action} encType="multipart/form-data">
+          <input type="hidden" name="id" value={assignment?.id} />
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="title">Title</label>
+              <Input id="title" name="title" required defaultValue={assignment?.title} />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="due-date">Due Date</label>
+              <Input id="due-date" name="due-date" required type="datetime-local" defaultValue={formatDateForInput(assignment?.due_date)} />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="description">Description</label>
+              <Textarea id="description" name="description" required defaultValue={assignment?.description} className="h-36" />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="file">Replace Attachment (optional)</label>
+              <Input id="file" name="file" type="file" accept=".pdf,.zip" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={isPending}>Save</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

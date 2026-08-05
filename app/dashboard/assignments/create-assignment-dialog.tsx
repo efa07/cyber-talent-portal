@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { createAssignment } from "@/app/actions"
 import { useState, useTransition } from "react"
@@ -51,7 +52,7 @@ export function CreateAssignmentDialog() {
             Add a new assignment for your students. Fill out the details below.
           </DialogDescription>
         </DialogHeader>
-        <form action={action}>
+        <form action={action} encType="multipart/form-data">
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Assignment Title</Label>
@@ -60,6 +61,10 @@ export function CreateAssignmentDialog() {
             <div className="space-y-2">
               <Label htmlFor="due-date">Due Date</Label>
               <Input id="due-date" name="due-date" required type="datetime-local" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" name="description" required placeholder="Describe the assignment, requirements, and grading rubric." className="h-36" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="file">Upload Assignment (PDF)</Label>

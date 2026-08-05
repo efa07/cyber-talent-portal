@@ -37,37 +37,32 @@ export function ResourcesUpload() {
     }
   }
 
-  const handleFiles = (files: FileList) => {
+  const handleFiles = async (files: FileList) => {
     const file = files[0]
     if (!file) return
 
     setIsUploading(true)
     setUploadProgress(0)
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          // Finished uploading, now call server action
-          const formData = new FormData()
-          formData.append("title", file.name)
-          
-          startTransition(async () => {
-            try {
-              await createResource(formData)
-              setTimeout(() => setIsUploading(false), 500)
-            } catch (error) {
-              console.error(error)
-              setIsUploading(false)
-            }
-          })
-          
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
+    // Simulate upload progress using async/await
+    for (let i = 10; i <= 100; i += 10) {
+      await new Promise(resolve => setTimeout(resolve, 200))
+      setUploadProgress(i)
+    }
+
+    // Finished uploading, now call server action
+    const formData = new FormData()
+    formData.append("title", file.name)
+    
+    startTransition(async () => {
+      try {
+        await createResource(formData)
+        setTimeout(() => setIsUploading(false), 500)
+      } catch (error) {
+        console.error(error)
+        setIsUploading(false)
+      }
+    })
   }
 
   return (
