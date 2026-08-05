@@ -22,10 +22,7 @@ export async function createAssignment(formData: FormData) {
     try {
       const fileName = `${Date.now()}-${(file as any).name}`
       const filePath = `assignments/${fileName}`
-      const fileBuffer = Buffer.from(await (file as any).arrayBuffer())
-
-      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, fileBuffer, {
-        contentType: (file as any).type || 'application/octet-stream',
+      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, file, {
         upsert: false,
       })
 
@@ -33,7 +30,7 @@ export async function createAssignment(formData: FormData) {
         console.error('Error uploading file to storage:', uploadError)
         // fallback to placeholder
       } else {
-        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath)
+        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath, { download: true })
         fileUrl = publicData?.publicUrl || fileUrl
       }
     } catch (e) {
@@ -76,17 +73,14 @@ export async function updateAssignment(formData: FormData) {
     try {
       const fileName = `${Date.now()}-${(file as any).name}`
       const filePath = `assignments/${fileName}`
-      const fileBuffer = Buffer.from(await (file as any).arrayBuffer())
-
-      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, fileBuffer, {
-        contentType: (file as any).type || 'application/octet-stream',
+      const { error: uploadError } = await supabase.storage.from('assignments').upload(filePath, file, {
         upsert: false,
       })
 
       if (uploadError) {
         console.error('Error uploading file to storage:', uploadError)
       } else {
-        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath)
+        const { data: publicData } = supabase.storage.from('assignments').getPublicUrl(filePath, { download: true })
         fileUrl = publicData?.publicUrl
       }
     } catch (e) {
