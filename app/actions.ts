@@ -252,3 +252,121 @@ export async function saveQuizQuestions(quizId: string, title: string, questions
   revalidatePath('/dashboard/quizzes')
   return { success: true }
 }
+
+export async function submitAssignment(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const assignmentId = formData.get("assignment_id") as string
+  if (!assignmentId) throw new Error("Missing assignment ID")
+
+  const file = formData.get('file') as File | null
+  if (!file || file.size === 0) {
+    throw new Error("No file provided")
+  }
+
+  let fileUrl = "#"
+
+  try {
+    const supabaseAdmin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    
+    const fileName = `${Date.now()}-${file.name}`
+    const filePath = `submissions/${fileName}`
+    
+    const fileBuffer = await file.arrayBuffer()
+    
+    const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
+      upsert: false,
+      contentType: file.type
+    })
+
+    if (uploadError) {
+      console.error('Error uploading student submission:', uploadError)
+      throw new Error("File upload failed")
+    } else {
+      const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
+      fileUrl = publicData?.publicUrl || "#"
+    }
+  } catch (e) {
+    console.error('File upload exception:', e)
+    throw new Error("File upload failed")
+  }
+
+  // Insert submission record
+  const { error } = await supabase.from('submissions').insert({
+    assignment_id: assignmentId,
+    student_id: user.id,
+    status: 'pending',
+    file_url: fileUrl,
+  })
+
+  if (error) {
+    console.error("Error creating submission record:", error)
+    throw new Error("Failed to record submission")
+  }
+
+  revalidatePath(`/dashboard/assignments/${assignmentId}`)
+  return { success: true }
+}
+
+export async function gradeSubmission(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  const submissionId = formData.get("submission_id") as string
+  const studentId = formData.get("student_id") as string
+  const assignmentId = formData.get("assignment_id") as string
+  const score = parseInt(formData.get("score") as string, 10)
+  
+  if (!submissionId || !studentId || isNaN(score)) {
+    throw new Error("Missing required grading fields")
+  }
+
+  // Use the admin client to bypass RLS for grading if necessary, but admins should have access based on schema policies
+  // Our schema policy says "Only admins can update submissions", so standard client works if user is admin
+  
+  // 1. Update submission
+  const { error: subError } = await supabase.from('submissions').update({
+    status: 'graded',
+    score: score
+  }).eq('id', submissionId)
+
+  if (subError) {
+    console.error("Error updating submission:", subError)
+    throw new Error("Failed to update submission")
+  }
+
+  // 2. Award XP to student (simple RPC or direct update if we have admin rights)
+  // Let's use the admin client to update the student's profile XP safely
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Fetch current XP
+  const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', studentId).single()
+  const currentXp = profile?.xp || 0
+
+  // Update XP
+  const { error: profileError } = await supabaseAdmin.from('profiles').update({
+    xp: currentXp + score
+  }).eq('id', studentId)
+
+  if (profileError) {
+    console.error("Error updating student XP:", profileError)
+  }
+
+  revalidatePath(`/dashboard/assignments/${assignmentId}`)
+  return { success: true }
+}
