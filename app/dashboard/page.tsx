@@ -87,7 +87,7 @@ export default async function DashboardPage() {
       badgeColor: "bg-[#10B981]/10 text-[#10B981]"
     },
     {
-      title: "Global Rank",
+      title: "Class Rank",
       value: myRank > 0 ? `#${myRank}` : "N/A",
       description: `Out of ${students.length} operatives`,
       icon: Trophy,
