@@ -1,38 +1,61 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Trophy, CheckCircle2, XCircle, ArrowRight, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
 
-const mockResults = [
-  {
-    id: 1,
-    question: "What is the output of `typeof null` in JavaScript?",
-    correctAnswer: "object",
-    userAnswer: "object",
-    isCorrect: true,
-  },
-  {
-    id: 2,
-    question: "Which hook is used to perform side effects in a functional component?",
-    correctAnswer: "useEffect",
-    userAnswer: "useState",
-    isCorrect: false,
-  },
-  {
-    id: 3,
-    question: "How do you apply a flex container using Tailwind CSS?",
-    correctAnswer: "flex",
-    userAnswer: "flex",
-    isCorrect: true,
+export default async function QuizResultsPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: quiz } = await supabase.from('quizzes').select('*').eq('id', unwrappedParams.id).single()
+  
+  if (!quiz) redirect('/dashboard/quizzes')
+
+  const { data: submission } = await supabase
+    .from('quiz_submissions')
+    .select('*')
+    .eq('quiz_id', quiz.id)
+    .eq('student_id', user.id)
+    .order('submitted_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!submission) {
+    // If they haven't taken it yet, redirect them to the quiz start page
+    redirect(`/dashboard/quizzes/${quiz.id}`)
   }
-]
 
-export default function QuizResultsPage() {
-  const totalQuestions = mockResults.length
-  const correctCount = mockResults.filter(r => r.isCorrect).length
-  const percentage = Math.round((correctCount / totalQuestions) * 100)
+  const { data: questions } = await supabase
+    .from('quiz_questions')
+    .select('*')
+    .eq('quiz_id', quiz.id)
+    .order('order_index', { ascending: true })
+
+  const totalQuestions = questions?.length || 0
+  
+  let correctCount = 0
+  const detailedResults = questions?.map(q => {
+    const correctOption = q.options[q.correct_option_index]
+    const userAnswerText = submission.answers?.[q.id] || "No answer provided"
+    const isCorrect = correctOption && correctOption.text === userAnswerText
+    
+    if (isCorrect) correctCount++
+    
+    return {
+      id: q.id,
+      question: q.question_text,
+      correctAnswer: correctOption?.text || "",
+      userAnswer: userAnswerText,
+      isCorrect
+    }
+  }) || []
+
+  const percentage = submission.score || 0
   
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto w-full pt-4 md:pt-8">
@@ -42,7 +65,7 @@ export default function QuizResultsPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Quiz Results</h1>
-          <p className="text-muted-foreground mt-1">JavaScript Fundamentals</p>
+          <p className="text-muted-foreground mt-1">{quiz.title}</p>
         </div>
       </div>
 
@@ -65,7 +88,7 @@ export default function QuizResultsPage() {
             
             <div className="flex items-center gap-2 mt-6 p-2 px-4 bg-primary/20 text-primary-foreground rounded-full">
               <Trophy className="h-4 w-4 text-yellow-400" />
-              <span className="text-sm font-medium">+85 XP Earned</span>
+              <span className="text-sm font-medium">+{percentage} XP Earned</span>
             </div>
           </CardContent>
         </Card>
@@ -97,9 +120,11 @@ export default function QuizResultsPage() {
             </div>
             
             <div className="mt-8 flex justify-end gap-3">
-              <Button variant="outline">Retake Quiz</Button>
+              <Link href={`/dashboard/quizzes/${quiz.id}`} className={buttonVariants({ variant: "outline" })}>
+                Retake Quiz
+              </Link>
               <Link href="/dashboard/quizzes" className={buttonVariants({ className: "gap-2" })}>
-                Next Module <ArrowRight className="h-4 w-4" />
+                Back to Quizzes <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </CardContent>
@@ -112,7 +137,7 @@ export default function QuizResultsPage() {
           <CardDescription>Review your answers and see correct solutions.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {mockResults.map((result, idx) => (
+          {detailedResults.map((result, idx) => (
             <div key={result.id} className="flex gap-4 border-b pb-6 last:border-0 last:pb-0">
               <div className="mt-1">
                 {result.isCorrect ? (

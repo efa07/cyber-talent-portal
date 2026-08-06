@@ -474,3 +474,47 @@ export async function submitQuiz(formData: FormData) {
   revalidatePath('/dashboard/student')
   return { success: true, score }
 }
+
+export async function createStudent(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized")
+  }
+
+  // Double check admin role
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') {
+    throw new Error("Unauthorized: Only admins can create students")
+  }
+
+  const name = formData.get("name") as string
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+  
+  if (!name || !email || !password) throw new Error("Missing required fields")
+
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  
+  const { error } = await supabaseAdmin.auth.admin.createUser({
+    email: email,
+    password: password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: name,
+      role: 'student'
+    }
+  })
+
+  if (error) {
+    console.error("Error creating student:", error)
+    throw new Error(error.message || "Failed to create student")
+  }
+
+  revalidatePath('/dashboard/students')
+  return { success: true }
+}

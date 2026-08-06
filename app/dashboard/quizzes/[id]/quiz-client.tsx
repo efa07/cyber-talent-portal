@@ -104,21 +104,27 @@ export function QuizClient({ quiz, questions }: { quiz: any, questions: any[] })
             onValueChange={(val) => setAnswers({ ...answers, [question.id]: val })}
             className="flex flex-col gap-4"
           >
-            {question.options.map((option: any, index: number) => (
-              <div key={index} className="flex items-center space-x-2">
-                <RadioGroupItem 
-                  value={option.text} 
-                  id={`q-${question.id}-opt-${index}`} 
-                  className="peer sr-only" 
-                />
-                <Label
-                  htmlFor={`q-${question.id}-opt-${index}`}
-                  className="flex flex-1 items-center justify-between rounded-xl border-2 border-muted bg-transparent p-4 hover:bg-muted peer-data-[state=checked]:border-green-500 peer-data-[state=checked]:bg-green-500/20 cursor-pointer transition-all"
+            {question.options.map((option: any, index: number) => {
+              const isSelected = answers[question.id] === option.text;
+              return (
+                <div 
+                  key={index}
+                  onClick={() => setAnswers({ ...answers, [question.id]: option.text })}
+                  className={`flex flex-1 items-center justify-between rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    isSelected 
+                      ? 'border-green-500 bg-green-500/20' 
+                      : 'border-muted bg-transparent hover:bg-muted'
+                  }`}
                 >
                   <span className="text-base font-medium">{option.text}</span>
-                </Label>
-              </div>
-            ))}
+                  <RadioGroupItem 
+                    value={option.text} 
+                    id={`q-${question.id}-opt-${index}`} 
+                    className="sr-only" 
+                  />
+                </div>
+              )
+            })}
           </RadioGroup>
         </CardContent>
         <CardFooter className="pt-8 flex justify-between border-t mt-4">

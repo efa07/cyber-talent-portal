@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
+import { AddStudentDialog } from "./add-student-dialog"
 
 function getInitials(name: string) {
   if (!name) return "U"
@@ -50,7 +51,7 @@ export default async function StudentsManagement() {
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
-          <Button>Add Student</Button>
+          <AddStudentDialog />
         </div>
       </div>
 
