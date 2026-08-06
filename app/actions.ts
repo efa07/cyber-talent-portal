@@ -519,3 +519,73 @@ export async function createStudent(formData: FormData) {
   revalidatePath('/dashboard/students')
   return { success: true }
 }
+
+export async function awardStar(studentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized: Please log in first.")
+  }
+
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Fetch current stars
+  const { data: studentProfile } = await supabaseAdmin.from('profiles').select('stars').eq('id', studentId).single()
+  const currentStars = studentProfile?.stars || 0
+
+  const { error } = await supabaseAdmin.from('profiles').update({
+    stars: currentStars + 1
+  }).eq('id', studentId)
+
+  if (error) {
+    console.error("Error awarding star:", error)
+    throw new Error(`Failed to award star: ${error.message}`)
+  }
+
+  revalidatePath('/dashboard/students')
+  revalidatePath(`/dashboard/students/${studentId}`)
+  revalidatePath('/dashboard/leaderboard')
+  revalidatePath('/dashboard/admin')
+  return { success: true }
+}
+
+export async function removeStudent(studentId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error("Unauthorized: Please log in first.")
+  }
+
+  const supabaseAdmin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // 1. Delete from profiles
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .delete()
+    .eq('id', studentId)
+
+  if (profileError) {
+    console.error("Error deleting profile:", profileError)
+  }
+
+  // 2. Delete from auth.users (if user exists in auth)
+  try {
+    await supabaseAdmin.auth.admin.deleteUser(studentId)
+  } catch (err) {
+    console.warn("User might not exist in auth or already deleted:", err)
+  }
+
+  revalidatePath('/dashboard/students')
+  revalidatePath('/dashboard/leaderboard')
+  revalidatePath('/dashboard/admin')
+  return { success: true }
+}
+

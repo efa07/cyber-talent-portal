@@ -2,9 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Activity, Award, BookOpen, Clock, Shield, Target, Trophy, Users } from "lucide-react"
+import { Trophy, Star, BookOpen, Zap, Clock, CheckCircle2, ArrowRight, Target, ShieldCheck, Flame, Sparkles } from "lucide-react"
 import { createClient } from "@/utils/supabase/server"
+import Link from "next/link"
+import { FadeUp, StaggerContainer, StaggerItem } from "@/components/dashboard/animated-components"
 
 function getInitials(name: string) {
   if (!name) return "U"
@@ -18,7 +19,7 @@ export default async function DashboardPage() {
   const userId = user?.id
 
   // Fetch current user profile
-  let profile = null;
+  let profile = null
   if (userId) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     profile = data
@@ -38,10 +39,16 @@ export default async function DashboardPage() {
     isCurrentUser: s.id === userId
   }))
 
-  // Calculate current user rank
   const myRank = students.findIndex(s => s.id === userId) + 1
 
-  // Fetch recent submissions (as activity)
+  // Fetch pending assignments count
+  const now = new Date().toISOString()
+  const { count: pendingAssignmentsCount } = await supabase
+    .from('assignments')
+    .select('*', { count: 'exact', head: true })
+    .gt('due_date', now)
+
+  // Fetch recent submissions
   const { data: submissionsData } = await supabase
     .from('submissions')
     .select(`
@@ -57,149 +64,283 @@ export default async function DashboardPage() {
 
   const recentActivity = (submissionsData || []).map((sub: any) => ({
     id: sub.id,
-    action: sub.status === 'graded' ? "Graded Submission" : "Submitted Module",
-    target: sub.assignments?.title || "Unknown Assignment",
-    time: new Date(sub.submitted_at).toLocaleDateString(),
-    points: sub.score ? `+${sub.score}` : (sub.status === 'pending' ? 'Pending' : '-'),
-    type: sub.status === 'graded' ? 'success' : 'neutral'
+    action: sub.status === 'graded' ? "Assignment Graded" : "Assignment Submitted",
+    target: sub.assignments?.title || "Security Challenge",
+    time: new Date(sub.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " • " + new Date(sub.submitted_at).toLocaleDateString(),
+    points: sub.score ? `+${sub.score} XP` : (sub.status === 'pending' ? 'Pending' : '-'),
+    isGraded: sub.status === 'graded'
   }))
 
-  const stats = [
+  const userXp = profile?.xp || 0
+  const userStars = profile?.stars || 0
+  const userLevel = Math.max(1, Math.floor(userXp / 500) + 1)
+  const xpCurrentLevel = userXp % 500
+  const xpProgressPercent = Math.min(100, Math.round((xpCurrentLevel / 500) * 100))
+
+  const statCards = [
+    {
+      title: "Total XP",
+      value: userXp.toLocaleString(),
+      description: "+12% this week",
+      icon: Zap,
+      badge: "+12%",
+      badgeColor: "bg-[#10B981]/10 text-[#10B981]"
+    },
     {
       title: "Global Rank",
       value: myRank > 0 ? `#${myRank}` : "N/A",
-      description: "Based on total XP",
+      description: `Out of ${students.length} operatives`,
       icon: Trophy,
-      trend: "Keep going!"
+      badge: "Rank",
+      badgeColor: "bg-[#684DF4]/10 text-[#684DF4]"
     },
     {
-      title: "Total Points",
-      value: profile ? profile.xp.toLocaleString() : "0",
-      description: "Across all modules",
-      icon: Award,
-      trend: "Earn more XP"
+      title: "Stars Earned",
+      value: userStars.toString(),
+      description: "Achievement rewards",
+      icon: Star,
+      badge: "Rewards",
+      badgeColor: "bg-[#F59E0B]/10 text-[#F59E0B]"
     },
     {
       title: "Active Modules",
-      value: "-",
+      value: (pendingAssignmentsCount || 0).toString(),
       description: "Work in progress",
       icon: BookOpen,
-      trend: ""
-    },
-    {
-      title: "Hours Logged",
-      value: "-",
-      description: "In cyber range",
-      icon: Clock,
-      trend: ""
+      badge: "Active",
+      badgeColor: "bg-[#8B5CF6]/10 text-[#8B5CF6]"
     }
   ]
 
-  return (
-    <div className="flex-1 space-y-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-        </div>
-      </div>
+  const rankMedals = ["🥇", "🥈", "🥉"]
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+  return (
+    <div className="space-y-8">
+      {/* Hero Section */}
+      <FadeUp delay={0.05}>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#684DF4] via-[#7C3AED] to-[#8B5CF6] opacity-95 text-white p-6 sm:p-8 shadow-md">
+          {/* Decorative Grid Pattern & Floating Blurred Circles */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{
+              backgroundImage: `radial-gradient(circle, #ffffff 1px, transparent 1px)`,
+              backgroundSize: `20px 20px`
+            }}
+          />
+          <div className="absolute -top-12 -right-12 w-56 h-56 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-purple-300/20 rounded-full blur-xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            {/* Left Content */}
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold tracking-wide">
+                <Sparkles className="h-3.5 w-3.5" />
+                Cybersecurity Pathway
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Welcome back 👋
+              </h2>
+              <p className="text-sm text-purple-100/90 leading-relaxed">
+                Continue your cybersecurity journey. You have <span className="font-semibold text-white">{pendingAssignmentsCount || 0} pending assignments</span> ready for completion.
+              </p>
+            </div>
+
+            {/* Right Content — Quick Stats */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-5 border border-white/15 min-w-[260px] space-y-3 shrink-0">
+              <div className="flex items-center justify-between text-xs font-semibold text-purple-100">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="h-4 w-4 text-purple-200" />
+                  Level {userLevel}
+                </span>
+                <span className="flex items-center gap-1 text-amber-300">
+                  <Star className="h-3.5 w-3.5 fill-amber-300" />
+                  {userStars} Stars
+                </span>
+              </div>
+
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-bold text-white tracking-tight">{userXp.toLocaleString()} <span className="text-xs font-normal text-purple-200">XP</span></span>
+                <span className="text-[11px] text-purple-200">{xpCurrentLevel}/500 XP to Lvl {userLevel + 1}</span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1">
+                <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${xpProgressPercent}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </FadeUp>
+
+      {/* Statistic Cards */}
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {statCards.map((card, i) => (
+          <StaggerItem key={i}>
+            <div className="group rounded-2xl border border-[#ECECF3] bg-white p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F3FF] text-[#684DF4] group-hover:bg-[#684DF4] group-hover:text-white transition-colors duration-200">
+                  <card.icon className="h-5 w-5" />
+                </div>
+                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${card.badgeColor}`}>
+                  {card.badge}
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <span className="text-xs font-medium text-[#6B7280]">{card.title}</span>
+                <div className="text-4xl font-bold tracking-tight text-[#111827] mt-1">{card.value}</div>
+              </div>
+
+              <div className="mt-3 text-xs text-[#6B7280] font-medium flex items-center gap-1">
+                {card.description}
+              </div>
+            </div>
+          </StaggerItem>
+        ))}
+      </StaggerContainer>
+
+      {/* Main Grid: Activity Timeline + Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+
+        {/* Recent Activity Timeline */}
+        <FadeUp delay={0.2} className="lg:col-span-4">
+          <Card className="rounded-2xl border-[#ECECF3] bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+            <CardHeader className="pb-3 border-b border-[#ECECF3]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold text-[#111827]">Recent Activity</CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280] mt-0.5">Your learning timeline in the cyber range</CardDescription>
+                </div>
+                <Link 
+                  href="/dashboard/assignments" 
+                  className="text-xs font-semibold text-[#684DF4] hover:text-[#7C3AED] hover:underline flex items-center gap-1 transition-colors"
+                >
+                  View all <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-              <p className="text-[10px] font-medium text-emerald-500 mt-1">
-                {stat.trend}
-              </p>
+
+            <CardContent className="pt-6 flex-1 flex flex-col justify-between">
+              {recentActivity.length > 0 ? (
+                <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-[#ECECF3]">
+                  {recentActivity.map((act) => (
+                    <div key={act.id} className="relative flex items-start justify-between gap-4 group">
+                      {/* Timeline Dot Icon */}
+                      <div className="absolute -left-6 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#F5F3FF] text-[#684DF4] ring-4 ring-white">
+                        {act.isGraded ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#10B981]" />
+                        ) : (
+                          <div className="h-2 w-2 rounded-full bg-[#684DF4]" />
+                        )}
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-[#111827]">{act.action}</p>
+                          <Badge variant="outline" className="text-[10px] py-0 px-2 border-[#ECECF3] text-[#6B7280]">
+                            {act.points}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-[#6B7280] font-medium">{act.target}</p>
+                        <p className="text-[11px] text-[#6B7280]/70">{act.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Empty State */
+                <div className="flex flex-col items-center justify-center py-10 text-center my-auto">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F5F3FF] text-[#684DF4] mb-3 text-2xl">
+                    🎯
+                  </div>
+                  <h4 className="text-sm font-bold text-[#111827]">You&apos;re all caught up!</h4>
+                  <p className="text-xs text-[#6B7280] max-w-xs mt-1">Complete a quiz or submit an assignment to earn XP and climb the leaderboard.</p>
+                  <Link href="/dashboard/quizzes" className="mt-4">
+                    <button className="h-9 px-4 rounded-xl bg-[#684DF4] hover:bg-[#7C3AED] text-white text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer">
+                      Start a Quiz
+                    </button>
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </FadeUp>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Your latest actions in the cyber range.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              {recentActivity.length > 0 ? recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center">
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
-                    {activity.type === 'success' ? <Award className="h-4 w-4 text-emerald-500" /> : <Activity className="h-4 w-4" />}
-                  </span>
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {activity.target}
-                    </p>
-                  </div>
-                  <div className="ml-auto flex items-center gap-4 text-sm">
-                    <span className="text-muted-foreground text-xs">{activity.time}</span>
-                    <Badge variant={activity.type === 'success' ? 'default' : 'secondary'}>
-                      {activity.points}
-                    </Badge>
-                  </div>
+        {/* Leaderboard Preview */}
+        <FadeUp delay={0.25} className="lg:col-span-3">
+          <Card className="rounded-2xl border-[#ECECF3] bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+            <CardHeader className="pb-3 border-b border-[#ECECF3]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold text-[#111827]">Leaderboard</CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280] mt-0.5">Top performing cyber operatives</CardDescription>
                 </div>
-              )) : (
-                <div className="text-center text-muted-foreground">No recent activity.</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                <Link 
+                  href="/dashboard/leaderboard" 
+                  className="text-xs font-semibold text-[#684DF4] hover:text-[#7C3AED] hover:underline flex items-center gap-1 transition-colors"
+                >
+                  Full list <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </CardHeader>
 
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Top Operatives</CardTitle>
-            <CardDescription>
-              Current standings in the cohort.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">Rank</TableHead>
-                  <TableHead>Operative</TableHead>
-                  <TableHead className="text-right">XP</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leaderboard.map((user) => (
-                  <TableRow key={user.rank} className={user.isCurrentUser ? "bg-muted/50" : ""}>
-                    <TableCell className="font-medium">
-                      #{user.rank}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium leading-none">{user.full_name || "Unknown"}</span>
-                          {user.isCurrentUser && <span className="text-[10px] text-muted-foreground">You</span>}
-                        </div>
+            <CardContent className="pt-4 flex-1">
+              <div className="space-y-2.5">
+                {leaderboard.map((student, i) => (
+                  <div 
+                    key={student.id} 
+                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-200 ${
+                      student.isCurrentUser
+                      ? "bg-[#F5F3FF] border-[#684DF4]/30 shadow-xs"
+                      : "border-transparent hover:bg-[#FAFBFC] hover:border-[#ECECF3]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Medal / Rank */}
+                      <div className="w-6 text-center text-sm font-bold">
+                        {i < 3 ? (
+                          <span>{rankMedals[i]}</span>
+                        ) : (
+                          <span className="text-xs text-[#6B7280]">#{student.rank}</span>
+                        )}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{(user.xp || 0).toLocaleString()}</TableCell>
-                  </TableRow>
+
+                      {/* Avatar */}
+                      <Avatar className="h-9 w-9 border border-[#ECECF3]">
+                        <AvatarFallback className="bg-[#F5F3FF] text-[#684DF4] text-xs font-bold">
+                          {getInitials(student.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      {/* Name & Badge */}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-[#111827]">{student.full_name || "Unknown"}</span>
+                          {student.isCurrentUser && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-[#684DF4] text-white">You</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-medium text-[#6B7280]">Level {Math.max(1, Math.floor((student.xp || 0) / 500) + 1)}</span>
+                      </div>
+                    </div>
+
+                    {/* XP & Stars */}
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-xs font-extrabold text-[#684DF4]">{(student.xp || 0).toLocaleString()} <span className="text-[10px] font-normal text-[#6B7280]">XP</span></span>
+                      <div className="flex items-center gap-1 text-[10px] text-[#F59E0B] font-medium">
+                        <Star className="h-3 w-3 fill-[#F59E0B]" />
+                        <span>{student.stars || 0}</span>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeUp>
+
       </div>
     </div>
   )

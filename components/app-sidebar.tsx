@@ -9,13 +9,10 @@ import {
   ClipboardList,
   Trophy,
   Megaphone,
-  Settings,
   ChevronRight,
-  PlusCircle,
-  FilePlus,
   BookOpen,
-  UserCircle,
-  LogOut
+  LogOut,
+  Sparkles
 } from "lucide-react"
 
 import {
@@ -26,8 +23,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupLabel,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -55,7 +50,7 @@ const studentNav = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const router = useRouter()
-  const { role, setRole } = useRole()
+  const { role } = useRole()
   const supabase = createClient()
   
   const navItems = role === "admin" ? adminNav : studentNav
@@ -68,43 +63,46 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar
-      style={{ "--sidebar-width": "18rem" } as React.CSSProperties}
-      className="border-r border-border bg-background text-foreground"
+      style={{ "--sidebar-width": "15.5rem" } as React.CSSProperties}
+      className="border-r border-[#ECECF3] bg-[#FFFFFF] text-[#111827] transition-all duration-200"
       {...props}
     >
-      <SidebarHeader className="pt-8 pb-4 px-6 bg-background">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-600/20">
-            <BookOpen className="h-6 w-6" />
+      <SidebarHeader className="pt-6 pb-4 px-5 bg-[#FFFFFF]">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#684DF4] text-white shadow-sm shadow-[#684DF4]/20">
+            <BookOpen className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[20px] font-semibold text-foreground tracking-wide">Cyber Talent</span>
-            <span className="text-[13px] font-medium text-violet-600">Learn. Code. Grow.</span>
+            <span className="text-[17px] font-bold text-[#111827] tracking-tight">Cyber Talent</span>
+            <span className="text-[11px] font-medium text-[#684DF4]">Cyber Range Portal</span>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-4 bg-background">
-        <SidebarMenu className="gap-1 mt-2">
+      <SidebarContent className="px-3 bg-[#FFFFFF]">
+        <SidebarMenu className="gap-1.5 mt-2">
           {navItems.map((item) => {
             const isActive = pathname === item.url || (item.url !== "/dashboard/admin" && item.url !== "/dashboard" && pathname.startsWith(item.url))
+            
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton 
-                  className={`h-[48px] px-3 rounded-xl transition-all relative overflow-hidden ${
+                  asChild
+                  className={`h-11 px-3.5 rounded-2xl transition-all duration-200 ${
                     isActive 
-                    ? "!bg-violet-50 text-violet-700 hover:!bg-violet-50 hover:text-violet-700" 
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "!bg-[#684DF4] !text-white hover:!bg-[#7C3AED] shadow-sm shadow-[#684DF4]/25" 
+                    : "text-[#6B7280] hover:bg-[#F5F3FF] hover:text-[#684DF4]"
                   }`}
                 >
-                  <Link href={item.url} className="flex items-center w-full h-full">
-                    {isActive && (
-                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500" />
-                    )}
-                    <item.icon className={`h-5 w-5 shrink-0 ${isActive ? "text-violet-600" : ""}`} />
-                    <span className="ml-4 text-[15px] font-medium">{item.name}</span>
+                  <Link href={item.url} className="flex items-center w-full h-full gap-3">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-xl transition-colors ${
+                      isActive ? "bg-white/20 text-white" : "bg-[#F5F3FF] text-[#684DF4] group-hover:bg-[#684DF4] group-hover:text-white"
+                    }`}>
+                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-[#684DF4]"}`} />
+                    </div>
+                    <span className={`text-sm font-medium ${isActive ? "text-white" : "text-[#111827]"}`}>{item.name}</span>
                     {item.hasArrow && (
-                      <ChevronRight className="ml-auto h-4 w-4 text-slate-400" />
+                      <ChevronRight className={`ml-auto h-3.5 w-3.5 opacity-60 ${isActive ? "text-white" : "text-[#6B7280]"}`} />
                     )}
                   </Link>
                 </SidebarMenuButton>
@@ -114,24 +112,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="p-5 bg-background pb-6">
-        <div className="flex flex-col gap-5">
+      <SidebarFooter className="p-4 bg-[#FFFFFF] pb-6">
+        <div className="flex flex-col gap-4">
           <button 
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 p-3 transition-colors hover:bg-red-50 hover:text-red-600 border border-slate-200 hover:border-red-200 w-full text-slate-600"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[#FAFBFC] p-2.5 text-[#6B7280] transition-all duration-200 hover:bg-[#EF4444]/10 hover:text-[#EF4444] border border-[#ECECF3] hover:border-[#EF4444]/30 w-full text-xs font-medium cursor-pointer"
           >
-            <LogOut className="h-4 w-4" />
-            <span className="text-[13px] font-medium">Log out</span>
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Log out</span>
           </button>
 
-          
-          <div className="flex items-center gap-3 px-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-              <BookOpen className="h-5 w-5" />
+          <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-2xl bg-[#F5F3FF] border border-[#684DF4]/10">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[#684DF4] text-white">
+              <Sparkles className="h-3.5 w-3.5" />
             </div>
-            <div className="flex flex-col text-[11px] text-slate-500">
-              <span>&copy; 2026 Cyber Talent</span>
-              <span>All rights reserved.</span>
+            <div className="flex flex-col text-[10px] text-[#6B7280]">
+              <span className="font-semibold text-[#684DF4]">Cyber Talent Room</span>
+              <span>v1.0 • Connected</span>
             </div>
           </div>
         </div>

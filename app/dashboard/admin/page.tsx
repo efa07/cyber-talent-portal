@@ -1,20 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, CheckCircle, TrendingUp, Bell, Calendar, Trophy, ChevronRight } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Users, FileText, CheckCircle2, TrendingUp, Calendar, Trophy, ArrowRight, PlusCircle, Sparkles, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/server"
-
-// Simple mock components for Recharts since full charts are verbose
-function MockChart({ title, height = "h-48" }: { title: string, height?: string }) {
-  return (
-    <div className={`w-full ${height} bg-zinc-100 dark:bg-zinc-900/50 rounded-md flex items-center justify-center border border-dashed border-zinc-200 dark:border-zinc-800`}>
-      <span className="text-zinc-400 font-medium text-sm">{title} Chart Area</span>
-    </div>
-  )
-}
+import { FadeUp, StaggerContainer, StaggerItem } from "@/components/dashboard/animated-components"
 
 function getInitials(name: string) {
   if (!name) return "U"
@@ -80,214 +72,260 @@ export default async function AdminDashboard() {
     .select('*')
     .eq('role', 'student')
     .order('xp', { ascending: false })
-    .limit(3)
+    .limit(4)
+
+  const statCards = [
+    {
+      title: "Total Students",
+      value: (studentCount || 0).toString(),
+      description: "Registered in system",
+      icon: Users,
+      badge: "Active",
+      badgeColor: "bg-[#684DF4]/10 text-[#684DF4]"
+    },
+    {
+      title: "Active Assignments",
+      value: (activeAssignmentsCount || 0).toString(),
+      description: "Currently open",
+      icon: FileText,
+      badge: "Open",
+      badgeColor: "bg-[#8B5CF6]/10 text-[#8B5CF6]"
+    },
+    {
+      title: "Pending Submissions",
+      value: (pendingSubmissionsCount || 0).toString(),
+      description: "Needs grading",
+      icon: CheckCircle2,
+      badge: pendingSubmissionsCount ? "Action Required" : "Up to date",
+      badgeColor: pendingSubmissionsCount ? "bg-[#EF4444]/10 text-[#EF4444]" : "bg-[#10B981]/10 text-[#10B981]"
+    },
+    {
+      title: "Avg. Assignment Score",
+      value: `${avgScore}%`,
+      description: "Across all graded",
+      icon: TrendingUp,
+      badge: "Overall",
+      badgeColor: "bg-[#10B981]/10 text-[#10B981]"
+    }
+  ]
+
+  const rankMedals = ["🥇", "🥈", "🥉"]
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Instructor Dashboard</h1>
-        <Button>Create Assignment</Button>
-      </div>
+    <div className="space-y-8">
+      {/* Hero Card */}
+      <FadeUp delay={0.05}>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#684DF4] via-[#7C3AED] to-[#8B5CF6] opacity-95 text-white p-6 sm:p-8 shadow-md">
+          {/* Decorative Pattern */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{
+              backgroundImage: `radial-gradient(circle, #ffffff 1px, transparent 1px)`,
+              backgroundSize: `20px 20px`
+            }}
+          />
+          <div className="absolute -top-12 -right-12 w-56 h-56 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-purple-300/20 rounded-full blur-xl pointer-events-none" />
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{studentCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Registered in system</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Assignments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeAssignmentsCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Currently open</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Submissions</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingSubmissionsCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Needs grading</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Assignment Score</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgScore}%</div>
-            <p className="text-xs text-muted-foreground">Across all graded</p>
-          </CardContent>
-        </Card>
-      </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold tracking-wide">
+                <Sparkles className="h-3.5 w-3.5" />
+                Instructor Portal
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Instructor Dashboard 👋
+              </h2>
+              <p className="text-sm text-purple-100/90 leading-relaxed">
+                Manage your cybersecurity class, review student submissions, and build assignments.
+              </p>
+            </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-        {/* Main Charts Area */}
-        <Card className="col-span-1 lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Activity Overview</CardTitle>
-            <CardDescription>Student participation and assignment submissions over the last 30 days.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MockChart title="Activity" height="h-[300px]" />
-          </CardContent>
-        </Card>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/dashboard/assignments">
+                <button className="h-10 px-4 rounded-xl bg-white hover:bg-purple-50 text-[#684DF4] text-xs font-bold transition-all hover:scale-[1.02] shadow-sm flex items-center gap-2 cursor-pointer">
+                  <PlusCircle className="h-4 w-4 text-[#684DF4]" />
+                  Create Assignment
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </FadeUp>
 
-        {/* Upcoming Deadlines */}
-        <Card className="col-span-1 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Upcoming Deadlines</CardTitle>
-            <CardDescription>Assignments due in the future.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {upcomingDeadlines && upcomingDeadlines.length > 0 ? (
-              upcomingDeadlines.map((assignment) => (
-                <div key={assignment.id} className="flex items-center p-3 rounded-lg border bg-card">
-                  <Calendar className="h-9 w-9 p-2 mr-4 bg-primary/10 text-primary rounded-md" />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">{assignment.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(assignment.due_date).toLocaleDateString()} at {new Date(assignment.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </p>
-                  </div>
+      {/* Statistic Cards */}
+      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {statCards.map((card, i) => (
+          <StaggerItem key={i}>
+            <div className="group rounded-2xl border border-[#ECECF3] bg-white p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+              <div className="flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F5F3FF] text-[#684DF4] group-hover:bg-[#684DF4] group-hover:text-white transition-colors duration-200">
+                  <card.icon className="h-5 w-5" />
                 </div>
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground p-4 text-center">No upcoming deadlines</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${card.badgeColor}`}>
+                  {card.badge}
+                </span>
+              </div>
 
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+              <div className="mt-4">
+                <span className="text-xs font-medium text-[#6B7280]">{card.title}</span>
+                <div className="text-4xl font-bold tracking-tight text-[#111827] mt-1">{card.value}</div>
+              </div>
+
+              <div className="mt-3 text-xs text-[#6B7280] font-medium flex items-center gap-1">
+                {card.description}
+              </div>
+            </div>
+          </StaggerItem>
+        ))}
+      </StaggerContainer>
+
+      {/* Grid: Recent Submissions + Upcoming Deadlines */}
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+
         {/* Recent Submissions */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Submissions</CardTitle>
-              <CardDescription>Latest assignments submitted by students.</CardDescription>
-            </div>
-            <Link href="/dashboard/assignments" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              View All
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Assignment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentSubmissions && recentSubmissions.length > 0 ? (
-                  recentSubmissions.map((sub) => {
-                    // Type assertion since the join returns an array or object depending on schema relations
-                    // For a one-to-many from submissions -> profiles, it's a single object
-                    const profile = sub.profiles as any
-                    const assignment = sub.assignments as any
-                    const studentName = profile?.full_name || "Unknown Student"
-                    const assignmentTitle = assignment?.title || "Unknown Assignment"
-                    
-                    return (
-                      <TableRow key={sub.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback>{getInitials(studentName)}</AvatarFallback>
-                            </Avatar>
-                            {studentName}
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={assignmentTitle}>
-                          {assignmentTitle}
-                        </TableCell>
-                        <TableCell>
-                          {sub.status === 'pending' ? (
-                            <Badge variant="secondary">Needs Grading</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-success border-success">Graded</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {sub.score !== null ? sub.score : '-'}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
-                      No recent submissions
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <FadeUp delay={0.2} className="lg:col-span-4">
+          <Card className="rounded-2xl border-[#ECECF3] bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+            <CardHeader className="pb-3 border-b border-[#ECECF3]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold text-[#111827]">Recent Submissions</CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280] mt-0.5">Latest assignments submitted by students</CardDescription>
+                </div>
+                <Link 
+                  href="/dashboard/assignments" 
+                  className="text-xs font-semibold text-[#684DF4] hover:text-[#7C3AED] hover:underline flex items-center gap-1 transition-colors"
+                >
+                  View All <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </CardHeader>
 
-        {/* Leaderboard Preview */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Top Performers</CardTitle>
-              <CardDescription>Current leaderboard standings.</CardDescription>
-            </div>
-            <Link href="/dashboard/leaderboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Full Leaderboard
-            </Link>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topPerformers && topPerformers.length > 0 ? (
-                topPerformers.map((student, index) => {
-                  let rankColors = "bg-zinc-300/50 text-zinc-600 dark:text-zinc-400" // Default for >3
-                  if (index === 0) rankColors = "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                  if (index === 1) rankColors = "bg-zinc-300/50 text-zinc-600 dark:text-zinc-400"
-                  if (index === 2) rankColors = "bg-amber-700/20 text-amber-700 dark:text-amber-500"
-                  
-                  return (
-                    <div key={student.id} className={`flex items-center justify-between p-2 rounded-lg ${index === 0 ? 'bg-zinc-100 dark:bg-zinc-800/50' : ''}`}>
+            <CardContent className="pt-4 flex-1">
+              {recentSubmissions && recentSubmissions.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-[#ECECF3]">
+                      <TableHead className="text-xs font-medium text-[#6B7280]">Student</TableHead>
+                      <TableHead className="text-xs font-medium text-[#6B7280]">Assignment</TableHead>
+                      <TableHead className="text-xs font-medium text-[#6B7280]">Status</TableHead>
+                      <TableHead className="text-xs font-medium text-[#6B7280] text-right">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentSubmissions.map((sub: any) => {
+                      const studentProfile = sub.profiles
+                      const assignment = sub.assignments
+                      const studentName = studentProfile?.full_name || "Unknown Student"
+                      const assignmentTitle = assignment?.title || "Unknown Assignment"
+
+                      return (
+                        <TableRow key={sub.id} className="border-[#ECECF3] hover:bg-[#FAFBFC]">
+                          <TableCell className="font-medium text-xs">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-7 w-7 border border-[#ECECF3]">
+                                <AvatarFallback className="bg-[#F5F3FF] text-[#684DF4] text-[10px] font-bold">
+                                  {getInitials(studentName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-[#111827] font-semibold">{studentName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-[#6B7280] max-w-[140px] truncate" title={assignmentTitle}>
+                            {assignmentTitle}
+                          </TableCell>
+                          <TableCell>
+                            {sub.status === 'pending' ? (
+                              <Badge className="bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20 text-[10px] py-0.5 px-2">
+                                Needs Grading
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20 text-[10px] py-0.5 px-2">
+                                Graded
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-xs font-bold text-[#111827]">
+                            {sub.score !== null ? `${sub.score}` : '-'}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10 text-center my-auto">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F5F3FF] text-[#684DF4] mb-2 text-xl">
+                    📁
+                  </div>
+                  <p className="text-xs font-semibold text-[#111827]">No recent submissions</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </FadeUp>
+
+        {/* Top Performers Leaderboard */}
+        <FadeUp delay={0.25} className="lg:col-span-3">
+          <Card className="rounded-2xl border-[#ECECF3] bg-white shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
+            <CardHeader className="pb-3 border-b border-[#ECECF3]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold text-[#111827]">Top Performers</CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280] mt-0.5">Current leaderboard standings</CardDescription>
+                </div>
+                <Link 
+                  href="/dashboard/leaderboard" 
+                  className="text-xs font-semibold text-[#684DF4] hover:text-[#7C3AED] hover:underline flex items-center gap-1 transition-colors"
+                >
+                  Full Leaderboard <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-4 flex-1">
+              <div className="space-y-2.5">
+                {topPerformers && topPerformers.length > 0 ? (
+                  topPerformers.map((student, i) => (
+                    <div 
+                      key={student.id} 
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-200 ${
+                        i === 0 
+                        ? "bg-[#F5F3FF] border-[#684DF4]/30" 
+                        : "border-transparent hover:bg-[#FAFBFC] hover:border-[#ECECF3]"
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`flex items-center justify-center w-6 h-6 rounded-full font-bold text-xs ${rankColors}`}>
-                          {index + 1}
+                        <div className="w-6 text-center text-sm font-bold">
+                          {i < 3 ? rankMedals[i] : `#${i + 1}`}
                         </div>
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
+
+                        <Avatar className="h-8 w-8 border border-[#ECECF3]">
+                          <AvatarFallback className="bg-[#F5F3FF] text-[#684DF4] text-xs font-bold">
+                            {getInitials(student.full_name)}
+                          </AvatarFallback>
                         </Avatar>
+
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold">{student.full_name || "Unknown"}</span>
-                          <span className="text-xs text-muted-foreground">{student.xp || 0} XP</span>
+                          <span className="text-xs font-bold text-[#111827]">{student.full_name || "Unknown"}</span>
+                          <span className="text-[10px] font-medium text-[#6B7280]">{student.xp || 0} XP</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Trophy className="h-4 w-4 text-yellow-500" />
-                        <span className="text-sm font-medium">{student.stars || 0}</span>
+
+                      <div className="flex items-center gap-1 text-xs text-[#F59E0B] font-bold">
+                        <Star className="h-3.5 w-3.5 fill-[#F59E0B]" />
+                        <span>{student.stars || 0}</span>
                       </div>
                     </div>
-                  )
-                })
-              ) : (
-                <div className="text-sm text-muted-foreground text-center p-4">No students on leaderboard</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  ))
+                ) : (
+                  <div className="text-xs text-[#6B7280] text-center py-6">No students found</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeUp>
+
       </div>
     </div>
   )

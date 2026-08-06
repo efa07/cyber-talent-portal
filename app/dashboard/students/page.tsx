@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, Filter, MoreHorizontal, Star, Edit, Trash, Eye, Award } from "lucide-react"
+import { Search, Filter, Star } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -10,20 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { createClient } from "@/utils/supabase/server"
-import Link from "next/link"
 import { AddStudentDialog } from "./add-student-dialog"
+import { StudentActionsDropdown } from "./student-actions-dropdown"
 
 function getInitials(name: string) {
   if (!name) return "U"
@@ -107,36 +99,7 @@ export default async function StudentsManagement() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger 
-                          render={
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          } 
-                        />
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem 
-                            render={
-                              <Link href={`/dashboard/students/${student.id}`}>
-                                <Eye className="mr-2 h-4 w-4" /> View Profile
-                              </Link>
-                            }
-                          />
-                          <DropdownMenuItem>
-                            <Award className="mr-2 h-4 w-4" /> Award Star
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash className="mr-2 h-4 w-4" /> Remove Student
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <StudentActionsDropdown studentId={student.id} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -170,4 +133,3 @@ export default async function StudentsManagement() {
     </div>
   )
 }
-
