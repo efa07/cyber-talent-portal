@@ -87,27 +87,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.name}>
                 <SidebarMenuButton 
-                  asChild
+                  render={
+                    <Link href={item.url} className="flex items-center w-full h-full gap-3 group/link">
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-xl transition-colors ${
+                        isActive 
+                        ? "bg-white/20 text-white" 
+                        : "bg-[#F5F3FF] text-[#684DF4] group-hover/link:bg-[#684DF4] group-hover/link:text-white"
+                      }`}>
+                        <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-white" : "text-[#684DF4] group-hover/link:text-white"}`} />
+                      </div>
+                      <span className={`text-sm font-medium ${isActive ? "text-white" : "text-[#111827] group-hover/link:text-[#684DF4]"}`}>{item.name}</span>
+                      {item.hasArrow && (
+                        <ChevronRight className={`ml-auto h-3.5 w-3.5 opacity-60 transition-colors ${isActive ? "text-white" : "text-[#6B7280] group-hover/link:text-[#684DF4]"}`} />
+                      )}
+                    </Link>
+                  }
                   className={`h-11 px-3.5 rounded-2xl transition-all duration-200 ${
                     isActive 
                     ? "!bg-[#684DF4] !text-white hover:!bg-[#7C3AED] shadow-sm shadow-[#684DF4]/25" 
                     : "text-[#6B7280] hover:bg-[#F5F3FF] hover:text-[#684DF4]"
                   }`}
-                >
-                  <Link href={item.url} className="flex items-center w-full h-full gap-3 group/link">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-xl transition-colors ${
-                      isActive 
-                      ? "bg-white/20 text-white" 
-                      : "bg-[#F5F3FF] text-[#684DF4] group-hover/link:bg-[#684DF4] group-hover/link:text-white"
-                    }`}>
-                      <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-white" : "text-[#684DF4] group-hover/link:text-white"}`} />
-                    </div>
-                    <span className={`text-sm font-medium ${isActive ? "text-white" : "text-[#111827] group-hover/link:text-[#684DF4]"}`}>{item.name}</span>
-                    {item.hasArrow && (
-                      <ChevronRight className={`ml-auto h-3.5 w-3.5 opacity-60 transition-colors ${isActive ? "text-white" : "text-[#6B7280] group-hover/link:text-[#684DF4]"}`} />
-                    )}
-                  </Link>
-                </SidebarMenuButton>
+                />
               </SidebarMenuItem>
             )
           })}

@@ -418,9 +418,7 @@ function GradeDialog({ submission, onGraded }: { submission: any, onGraded: () =
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">Grade</Button>
-      </DialogTrigger>
+      <DialogTrigger render={<Button size="sm">Grade</Button>} />
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Grade Submission</DialogTitle>
