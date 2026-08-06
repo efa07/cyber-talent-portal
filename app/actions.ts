@@ -4,6 +4,12 @@ import { createClient } from "@/utils/supabase/server"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
+  return createSupabaseClient(url, key)
+}
+
 export async function createAssignment(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,10 +27,7 @@ export async function createAssignment(formData: FormData) {
   const file = formData.get('file') as File | null
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      const supabaseAdmin = getAdminClient()
       
       const fileName = `${Date.now()}-${file.name}`
       const filePath = `assignments/${fileName}`
@@ -81,10 +84,7 @@ export async function updateAssignment(formData: FormData) {
   const file = formData.get('file') as File | null
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      const supabaseAdmin = getAdminClient()
       
       const fileName = `${Date.now()}-${file.name}`
       const filePath = `assignments/${fileName}`
@@ -169,10 +169,7 @@ export async function createResource(formData: FormData) {
   
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+      const supabaseAdmin = getAdminClient()
       
       const fileName = `${Date.now()}-${file.name}`
       const filePath = `resources/${fileName}`
@@ -303,10 +300,7 @@ export async function submitAssignment(formData: FormData) {
   let fileUrl = "#"
 
   try {
-    const supabaseAdmin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseAdmin = getAdminClient()
     
     const fileName = `${Date.now()}-${file.name}`
     const filePath = `submissions/${fileName}`
@@ -380,10 +374,7 @@ export async function gradeSubmission(formData: FormData) {
 
   // 2. Award XP to student (simple RPC or direct update if we have admin rights)
   // Let's use the admin client to update the student's profile XP safely
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabaseAdmin = getAdminClient()
 
   // Fetch current XP
   const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', studentId).single()
@@ -459,10 +450,7 @@ export async function submitQuiz(formData: FormData) {
 
   // Award XP based on score
   try {
-    const supabaseAdmin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabaseAdmin = getAdminClient()
     const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', user.id).single()
     if (profile) {
       await supabaseAdmin.from('profiles').update({ xp: profile.xp + score }).eq('id', user.id)
@@ -496,10 +484,7 @@ export async function createStudent(formData: FormData) {
   
   if (!name || !email || !password) throw new Error("Missing required fields")
 
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabaseAdmin = getAdminClient()
   
   const { error } = await supabaseAdmin.auth.admin.createUser({
     email: email,
@@ -528,10 +513,7 @@ export async function awardStar(studentId: string) {
     throw new Error("Unauthorized: Please log in first.")
   }
 
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabaseAdmin = getAdminClient()
 
   // Fetch current stars
   const { data: studentProfile } = await supabaseAdmin.from('profiles').select('stars').eq('id', studentId).single()
@@ -561,10 +543,7 @@ export async function removeStudent(studentId: string) {
     throw new Error("Unauthorized: Please log in first.")
   }
 
-  const supabaseAdmin = createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabaseAdmin = getAdminClient()
 
   // 1. Delete from profiles
   const { error: profileError } = await supabaseAdmin
