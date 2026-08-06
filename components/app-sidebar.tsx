@@ -42,7 +42,6 @@ const adminNav = [
   { name: "Quizzes", url: "/dashboard/quizzes", icon: ClipboardList, hasArrow: true },
   { name: "Leaderboard", url: "/dashboard/leaderboard", icon: Trophy, hasArrow: false },
   { name: "Announcements", url: "/dashboard/announcements", icon: Megaphone, hasArrow: false },
-  { name: "Settings", url: "/dashboard/settings", icon: Settings, hasArrow: false },
 ]
 
 const studentNav = [
@@ -51,7 +50,6 @@ const studentNav = [
   { name: "Resources", url: "/dashboard/resources", icon: Folder, hasArrow: true },
   { name: "Quizzes", url: "/dashboard/quizzes", icon: ClipboardList, hasArrow: true },
   { name: "Leaderboard", url: "/dashboard/leaderboard", icon: Trophy, hasArrow: false },
-  { name: "Settings", url: "/dashboard/settings", icon: Settings, hasArrow: false },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

@@ -207,6 +207,7 @@ CREATE TABLE quiz_submissions (
   student_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   score INTEGER NOT NULL,
   time_spent_seconds INTEGER NOT NULL,
+  answers JSONB,
   submitted_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

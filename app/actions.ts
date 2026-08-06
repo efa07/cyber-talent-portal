@@ -448,7 +448,8 @@ export async function submitQuiz(formData: FormData) {
     quiz_id: quizId,
     student_id: user.id,
     score: score,
-    time_spent_seconds: timeSpent
+    time_spent_seconds: timeSpent,
+    answers: userAnswers
   })
 
   if (error) {
