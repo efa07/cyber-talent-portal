@@ -94,15 +94,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     : "text-[#6B7280] hover:bg-[#F5F3FF] hover:text-[#684DF4]"
                   }`}
                 >
-                  <Link href={item.url} className="flex items-center w-full h-full gap-3">
+                  <Link href={item.url} className="flex items-center w-full h-full gap-3 group/link">
                     <div className={`flex h-7 w-7 items-center justify-center rounded-xl transition-colors ${
-                      isActive ? "bg-white/20 text-white" : "bg-[#F5F3FF] text-[#684DF4] group-hover:bg-[#684DF4] group-hover:text-white"
+                      isActive 
+                      ? "bg-white/20 text-white" 
+                      : "bg-[#F5F3FF] text-[#684DF4] group-hover/link:bg-[#684DF4] group-hover/link:text-white"
                     }`}>
-                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-[#684DF4]"}`} />
+                      <item.icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-white" : "text-[#684DF4] group-hover/link:text-white"}`} />
                     </div>
-                    <span className={`text-sm font-medium ${isActive ? "text-white" : "text-[#111827]"}`}>{item.name}</span>
+                    <span className={`text-sm font-medium ${isActive ? "text-white" : "text-[#111827] group-hover/link:text-[#684DF4]"}`}>{item.name}</span>
                     {item.hasArrow && (
-                      <ChevronRight className={`ml-auto h-3.5 w-3.5 opacity-60 ${isActive ? "text-white" : "text-[#6B7280]"}`} />
+                      <ChevronRight className={`ml-auto h-3.5 w-3.5 opacity-60 transition-colors ${isActive ? "text-white" : "text-[#6B7280] group-hover/link:text-[#684DF4]"}`} />
                     )}
                   </Link>
                 </SidebarMenuButton>
