@@ -12,10 +12,20 @@ VALUES
   ('44444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'sarah@example.com', crypt('password123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Sarah Jenkins","role":"student"}', now(), now(), '', '', '', '')
 ON CONFLICT (id) DO NOTHING;
 
--- Update profiles with XP and Stars for the leaderboard
-UPDATE public.profiles SET xp = 2450, stars = 14 WHERE id = '22222222-2222-2222-2222-222222222222';
-UPDATE public.profiles SET xp = 2210, stars = 12 WHERE id = '33333333-3333-3333-3333-333333333333';
-UPDATE public.profiles SET xp = 2150, stars = 10 WHERE id = '44444444-4444-4444-4444-444444444444';
+-- Explicitly insert profiles in case the trigger is disabled or fails during seed
+INSERT INTO public.profiles (id, full_name, role, xp, stars)
+VALUES
+  ('11111111-1111-1111-1111-111111111111', 'Admin Instructor', 'admin', 0, 0),
+  ('22222222-2222-2222-2222-222222222222', 'Emma Watson', 'student', 2450, 14),
+  ('33333333-3333-3333-3333-333333333333', 'Michael Johnson', 'student', 2210, 12),
+  ('44444444-4444-4444-4444-444444444444', 'Sarah Jenkins', 'student', 2150, 10)
+ON CONFLICT (id) DO UPDATE SET 
+  full_name = EXCLUDED.full_name,
+  role = EXCLUDED.role,
+  xp = EXCLUDED.xp,
+  stars = EXCLUDED.stars;
+
+-- Profile XP and Stars are already set in the explicit insert above
 
 -- Insert Assignments
 INSERT INTO public.assignments (id, title, description, due_date, instructor_id)
