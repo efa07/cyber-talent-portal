@@ -12,7 +12,8 @@ import {
   ChevronRight,
   BookOpen,
   LogOut,
-  Sparkles
+  Sparkles,
+  CheckCircle
 } from "lucide-react"
 
 import {
@@ -33,6 +34,7 @@ const adminNav = [
   { name: "Dashboard", url: "/dashboard/admin", icon: Home, hasArrow: false },
   { name: "Students", url: "/dashboard/students", icon: Users, hasArrow: true },
   { name: "Assignments", url: "/dashboard/assignments", icon: FileText, hasArrow: true },
+  { name: "Submissions", url: "/dashboard/assignments/submissions", icon: CheckCircle, hasArrow: true },
   { name: "Resources", url: "/dashboard/resources", icon: Folder, hasArrow: true },
   { name: "Quizzes", url: "/dashboard/quizzes", icon: ClipboardList, hasArrow: true },
   { name: "Leaderboard", url: "/dashboard/leaderboard", icon: Trophy, hasArrow: false },

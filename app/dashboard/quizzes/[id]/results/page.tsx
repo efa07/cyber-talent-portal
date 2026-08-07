@@ -121,7 +121,7 @@ export default async function QuizResultsPage({ params }: { params: Promise<{ id
             
             <div className="mt-8 flex justify-end gap-3">
               <Link href={`/dashboard/quizzes/${quiz.id}`} className={buttonVariants({ variant: "outline" })}>
-                Retake Quiz
+                Review Answers
               </Link>
               <Link href="/dashboard/quizzes" className={buttonVariants({ className: "gap-2" })}>
                 Back to Quizzes <ArrowRight className="h-4 w-4" />

@@ -387,6 +387,21 @@ export async function submitQuiz(formData: FormData) {
 
   const supabaseAdmin = getAdminClient()
 
+  // Check if the student has already submitted this quiz
+  const { data: existingSubmission } = await supabaseAdmin
+    .from('quiz_submissions')
+    .select('id, score')
+    .eq('quiz_id', quizId)
+    .eq('student_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (existingSubmission) {
+    // Already submitted — do NOT insert a new row or award XP.
+    // Just return so the client can redirect to results showing the original score.
+    return { success: true, score: existingSubmission.score, alreadySubmitted: true }
+  }
+
   // Fetch the actual questions to grade it securely on the server
   const { data: questions } = await supabaseAdmin
     .from('quiz_questions')
@@ -409,7 +424,7 @@ export async function submitQuiz(formData: FormData) {
   const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0
   const timeSpent = parseInt(formData.get("time_spent") as string, 10) || 300
 
-  // Insert submission
+  // Insert submission (first attempt only)
   const { error } = await supabaseAdmin.from('quiz_submissions').insert({
     quiz_id: quizId,
     student_id: user.id,
@@ -423,7 +438,7 @@ export async function submitQuiz(formData: FormData) {
     throw new Error(`Failed to submit quiz: ${error.message}`)
   }
 
-  // Award XP based on score
+  // Award XP based on score (first attempt only)
   try {
     const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', user.id).single()
     if (profile) {
