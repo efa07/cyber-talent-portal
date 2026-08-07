@@ -5,53 +5,63 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
 function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
   return createSupabaseClient(url, key)
 }
 
-export async function createAssignment(formData: FormData) {
+async function verifyAdminUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) {
-    throw new Error("Unauthorized")
+    throw new Error("Unauthorized: Please log in first.")
   }
+
+  const supabaseAdmin = getAdminClient()
+  const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single()
+  
+  if (profile?.role !== 'admin') {
+    throw new Error("Unauthorized: Only instructors can perform this action.")
+  }
+
+  return { user, supabaseAdmin }
+}
+
+export async function createAssignment(formData: FormData) {
+  const { user, supabaseAdmin } = await verifyAdminUser()
 
   const title = formData.get("title") as string
   const dueDate = formData.get("due-date") as string
   const description = (formData.get("description") as string) || "New assignment created by instructor."
-  let fileUrl = "#"
+  let fileUrl: string | null = null
 
   // Handle file upload to Supabase Storage if a file was provided
   const file = formData.get('file') as File | null
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = getAdminClient()
-      
-      const fileName = `${Date.now()}-${file.name}`
-      const filePath = `assignments/${fileName}`
-      
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const filePath = `${Date.now()}-${sanitizedName}`
       const fileBuffer = await file.arrayBuffer()
       
       const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
-        upsert: false,
-        contentType: file.type
+        upsert: true,
+        contentType: file.type || 'application/octet-stream'
       })
 
       if (uploadError) {
         console.error('Error uploading file to storage:', uploadError)
-        // fallback to placeholder
+        throw new Error(`File upload failed: ${uploadError.message}`)
       } else {
         const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
-        fileUrl = publicData?.publicUrl || fileUrl
+        fileUrl = publicData?.publicUrl || null
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('File upload failed', e)
+      throw new Error(e?.message || 'File upload failed')
     }
   }
 
-  const { error } = await supabase.from('assignments').insert({
+  const { error } = await supabaseAdmin.from('assignments').insert({
     title,
     description,
     due_date: new Date(dueDate).toISOString(),
@@ -61,7 +71,7 @@ export async function createAssignment(formData: FormData) {
 
   if (error) {
     console.error("Error creating assignment:", error)
-    throw new Error("Failed to create assignment")
+    throw new Error(`Failed to create assignment: ${error.message}`)
   }
 
   revalidatePath('/dashboard/assignments')
@@ -69,41 +79,36 @@ export async function createAssignment(formData: FormData) {
 }
 
 export async function updateAssignment(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { user, supabaseAdmin } = await verifyAdminUser()
 
   const id = formData.get("id") as string
   const title = formData.get("title") as string
   const dueDate = formData.get("due-date") as string
   const description = (formData.get("description") as string) || ""
-  let fileUrl = undefined
+  let fileUrl: string | undefined = undefined
+
   const file = formData.get('file') as File | null
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = getAdminClient()
-      
-      const fileName = `${Date.now()}-${file.name}`
-      const filePath = `assignments/${fileName}`
-      
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const filePath = `${Date.now()}-${sanitizedName}`
       const fileBuffer = await file.arrayBuffer()
       
       const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
-        upsert: false,
-        contentType: file.type
+        upsert: true,
+        contentType: file.type || 'application/octet-stream'
       })
 
       if (uploadError) {
         console.error('Error uploading file to storage:', uploadError)
+        throw new Error(`File upload failed: ${uploadError.message}`)
       } else {
         const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
         fileUrl = publicData?.publicUrl
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('File upload failed', e)
+      throw new Error(e?.message || 'File upload failed')
     }
   }
 
@@ -112,13 +117,13 @@ export async function updateAssignment(formData: FormData) {
     description,
     due_date: new Date(dueDate).toISOString(),
   }
-  if (fileUrl) updatePayload.file_url = fileUrl
+  if (fileUrl !== undefined) updatePayload.file_url = fileUrl
 
-  const { error } = await supabase.from('assignments').update(updatePayload).eq('id', id)
+  const { error } = await supabaseAdmin.from('assignments').update(updatePayload).eq('id', id)
 
   if (error) {
     console.error('Error updating assignment:', error)
-    throw new Error('Failed to update assignment')
+    throw new Error(`Failed to update assignment: ${error.message}`)
   }
 
   revalidatePath(`/dashboard/assignments/${id}`)
@@ -127,85 +132,76 @@ export async function updateAssignment(formData: FormData) {
 }
 
 export async function createAnnouncement(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { user, supabaseAdmin } = await verifyAdminUser()
 
   const title = formData.get("title") as string
   const content = formData.get("message") as string
 
-  const { error } = await supabase.from('announcements').insert({
+  const { error } = await supabaseAdmin.from('announcements').insert({
     title,
     content,
-    type: 'info', // Default to info
+    type: 'info',
     author_id: user.id
   })
 
   if (error) {
     console.error("Error creating announcement:", error)
-    throw new Error("Failed to create announcement")
+    throw new Error(`Failed to create announcement: ${error.message}`)
   }
 
   revalidatePath('/dashboard/announcements')
+  revalidatePath('/dashboard/student')
+  revalidatePath('/dashboard/admin')
   return { success: true }
 }
 
 export async function createResource(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { user, supabaseAdmin } = await verifyAdminUser()
 
   const title = formData.get("title") as string || "Uploaded Resource"
-  let fileUrl = "#"
+  let fileUrl: string | null = null
   let resourceType = "pdf"
 
   const file = formData.get('file') as File | null
   
   if (file && file.size > 0) {
     try {
-      const supabaseAdmin = getAdminClient()
-      
-      const fileName = `${Date.now()}-${file.name}`
-      const filePath = `resources/${fileName}`
-      
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const filePath = `${Date.now()}-${sanitizedName}`
       const fileBuffer = await file.arrayBuffer()
       
-      const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
-        upsert: false,
-        contentType: file.type
+      const { error: uploadError } = await supabaseAdmin.storage.from('resources').upload(filePath, fileBuffer, {
+        upsert: true,
+        contentType: file.type || 'application/octet-stream'
       })
 
       if (uploadError) {
         console.error('Error uploading resource:', uploadError)
+        throw new Error(`File upload failed: ${uploadError.message}`)
       } else {
-        const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
-        fileUrl = publicData?.publicUrl || "#"
+        const { data: publicData } = supabaseAdmin.storage.from('resources').getPublicUrl(filePath)
+        fileUrl = publicData?.publicUrl || null
       }
       
       const ext = file.name.split('.').pop()?.toLowerCase()
       if (ext) resourceType = ext
-    } catch(e) {
+    } catch(e: any) {
       console.error('File upload exception:', e)
+      throw new Error(e?.message || 'File upload failed')
     }
   }
 
-  const { error } = await supabase.from('resources').insert({
+  const { error } = await supabaseAdmin.from('resources').insert({
     title,
     description: "Uploaded resource file.",
-    file_url: fileUrl,
+    file_url: fileUrl || "#",
     resource_type: resourceType,
     instructor_id: user.id
   })
 
   if (error) {
     console.error("Error creating resource:", error)
-    throw new Error("Failed to create resource")
+    throw new Error(`Failed to create resource: ${error.message}`)
   }
 
   revalidatePath('/dashboard/resources')
@@ -213,19 +209,14 @@ export async function createResource(formData: FormData) {
 }
 
 export async function createQuiz(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { user, supabaseAdmin } = await verifyAdminUser()
 
   const title = formData.get("title") as string
   const description = formData.get("description") as string
   const timeLimit = parseInt(formData.get("time-limit") as string, 10)
   const maxAttempts = parseInt(formData.get("attempts") as string, 10)
 
-  const { data, error } = await supabase.from('quizzes').insert({
+  const { data, error } = await supabaseAdmin.from('quizzes').insert({
     title,
     description,
     time_limit_minutes: timeLimit || 30,
@@ -235,7 +226,7 @@ export async function createQuiz(formData: FormData) {
 
   if (error) {
     console.error("Error creating quiz:", error)
-    throw new Error("Failed to create quiz")
+    throw new Error(`Failed to create quiz: ${error.message}`)
   }
 
   revalidatePath('/dashboard/quizzes')
@@ -243,18 +234,13 @@ export async function createQuiz(formData: FormData) {
 }
 
 export async function saveQuizQuestions(quizId: string, title: string, questions: any[]) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { supabaseAdmin } = await verifyAdminUser()
 
   // Update quiz title
-  await supabase.from('quizzes').update({ title }).eq('id', quizId)
+  await supabaseAdmin.from('quizzes').update({ title }).eq('id', quizId)
 
-  // Clear existing questions for this quiz (simplest way to handle updates)
-  await supabase.from('quiz_questions').delete().eq('quiz_id', quizId)
+  // Clear existing questions for this quiz
+  await supabaseAdmin.from('quiz_questions').delete().eq('quiz_id', quizId)
 
   // Insert new questions
   const questionsToInsert = questions.map((q, index) => {
@@ -269,10 +255,10 @@ export async function saveQuizQuestions(quizId: string, title: string, questions
   })
 
   if (questionsToInsert.length > 0) {
-    const { error } = await supabase.from('quiz_questions').insert(questionsToInsert)
+    const { error } = await supabaseAdmin.from('quiz_questions').insert(questionsToInsert)
     if (error) {
       console.error("Error saving quiz questions:", error)
-      throw new Error("Failed to save quiz questions")
+      throw new Error(`Failed to save quiz questions: ${error.message}`)
     }
   }
 
@@ -286,7 +272,7 @@ export async function submitAssignment(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    throw new Error("Unauthorized")
+    throw new Error("Unauthorized: Please log in first.")
   }
 
   const assignmentId = formData.get("assignment_id") as string
@@ -297,44 +283,44 @@ export async function submitAssignment(formData: FormData) {
     throw new Error("No file provided")
   }
 
-  let fileUrl = "#"
+  let fileUrl: string | null = null
 
   try {
     const supabaseAdmin = getAdminClient()
-    
-    const fileName = `${Date.now()}-${file.name}`
-    const filePath = `submissions/${fileName}`
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const filePath = `${Date.now()}-${sanitizedName}`
     
     const fileBuffer = await file.arrayBuffer()
     
-    const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
-      upsert: false,
-      contentType: file.type
+    const { error: uploadError } = await supabaseAdmin.storage.from('submissions').upload(filePath, fileBuffer, {
+      upsert: true,
+      contentType: file.type || 'application/octet-stream'
     })
 
     if (uploadError) {
       console.error('Error uploading student submission:', uploadError)
-      throw new Error("File upload failed")
+      throw new Error(`File upload failed: ${uploadError.message}`)
     } else {
-      const { data: publicData } = supabaseAdmin.storage.from('assignments').getPublicUrl(filePath)
-      fileUrl = publicData?.publicUrl || "#"
+      const { data: publicData } = supabaseAdmin.storage.from('submissions').getPublicUrl(filePath)
+      fileUrl = publicData?.publicUrl || null
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('File upload exception:', e)
-    throw new Error("File upload failed")
+    throw new Error(e?.message || "File upload failed")
   }
 
-  // Insert submission record
-  const { error } = await supabase.from('submissions').insert({
+  const supabaseAdmin = getAdminClient()
+  const { error } = await supabaseAdmin.from('submissions').upsert({
     assignment_id: assignmentId,
     student_id: user.id,
     status: 'pending',
     file_url: fileUrl,
-  })
+    submitted_at: new Date().toISOString()
+  }, { onConflict: 'assignment_id,student_id' })
 
   if (error) {
     console.error("Error creating submission record:", error)
-    throw new Error("Failed to record submission")
+    throw new Error(`Failed to record submission: ${error.message}`)
   }
 
   revalidatePath(`/dashboard/assignments/${assignmentId}`)
@@ -342,12 +328,7 @@ export async function submitAssignment(formData: FormData) {
 }
 
 export async function gradeSubmission(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
+  const { supabaseAdmin } = await verifyAdminUser()
 
   const submissionId = formData.get("submission_id") as string
   const studentId = formData.get("student_id") as string
@@ -358,29 +339,21 @@ export async function gradeSubmission(formData: FormData) {
     throw new Error("Missing required grading fields")
   }
 
-  // Use the admin client to bypass RLS for grading if necessary, but admins should have access based on schema policies
-  // Our schema policy says "Only admins can update submissions", so standard client works if user is admin
-  
   // 1. Update submission
-  const { error: subError } = await supabase.from('submissions').update({
+  const { error: subError } = await supabaseAdmin.from('submissions').update({
     status: 'graded',
     score: score
   }).eq('id', submissionId)
 
   if (subError) {
     console.error("Error updating submission:", subError)
-    throw new Error("Failed to update submission")
+    throw new Error(`Failed to update submission: ${subError.message}`)
   }
 
-  // 2. Award XP to student (simple RPC or direct update if we have admin rights)
-  // Let's use the admin client to update the student's profile XP safely
-  const supabaseAdmin = getAdminClient()
-
-  // Fetch current XP
+  // 2. Award XP to student
   const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', studentId).single()
   const currentXp = profile?.xp || 0
 
-  // Update XP
   const { error: profileError } = await supabaseAdmin.from('profiles').update({
     xp: currentXp + score
   }).eq('id', studentId)
@@ -398,7 +371,7 @@ export async function submitQuiz(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    throw new Error("Unauthorized")
+    throw new Error("Unauthorized: Please log in first.")
   }
 
   const quizId = formData.get("quiz_id") as string
@@ -412,8 +385,10 @@ export async function submitQuiz(formData: FormData) {
     throw new Error("Invalid answers format")
   }
 
+  const supabaseAdmin = getAdminClient()
+
   // Fetch the actual questions to grade it securely on the server
-  const { data: questions } = await supabase
+  const { data: questions } = await supabaseAdmin
     .from('quiz_questions')
     .select('*')
     .eq('quiz_id', quizId)
@@ -435,7 +410,7 @@ export async function submitQuiz(formData: FormData) {
   const timeSpent = parseInt(formData.get("time_spent") as string, 10) || 300
 
   // Insert submission
-  const { error } = await supabase.from('quiz_submissions').insert({
+  const { error } = await supabaseAdmin.from('quiz_submissions').insert({
     quiz_id: quizId,
     student_id: user.id,
     score: score,
@@ -445,12 +420,11 @@ export async function submitQuiz(formData: FormData) {
 
   if (error) {
     console.error("Error submitting quiz:", error)
-    throw new Error("Failed to submit quiz")
+    throw new Error(`Failed to submit quiz: ${error.message}`)
   }
 
   // Award XP based on score
   try {
-    const supabaseAdmin = getAdminClient()
     const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', user.id).single()
     if (profile) {
       await supabaseAdmin.from('profiles').update({ xp: profile.xp + score }).eq('id', user.id)
@@ -465,18 +439,7 @@ export async function submitQuiz(formData: FormData) {
 }
 
 export async function createStudent(formData: FormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized")
-  }
-
-  // Double check admin role
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
-    throw new Error("Unauthorized: Only admins can create students")
-  }
+  const { supabaseAdmin } = await verifyAdminUser()
 
   const name = formData.get("name") as string
   const email = formData.get("email") as string
@@ -484,8 +447,6 @@ export async function createStudent(formData: FormData) {
   
   if (!name || !email || !password) throw new Error("Missing required fields")
 
-  const supabaseAdmin = getAdminClient()
-  
   const { error } = await supabaseAdmin.auth.admin.createUser({
     email: email,
     password: password,
@@ -506,14 +467,7 @@ export async function createStudent(formData: FormData) {
 }
 
 export async function awardStar(studentId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized: Please log in first.")
-  }
-
-  const supabaseAdmin = getAdminClient()
+  const { supabaseAdmin } = await verifyAdminUser()
 
   // Fetch current stars
   const { data: studentProfile } = await supabaseAdmin.from('profiles').select('stars').eq('id', studentId).single()
@@ -536,14 +490,7 @@ export async function awardStar(studentId: string) {
 }
 
 export async function removeStudent(studentId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error("Unauthorized: Please log in first.")
-  }
-
-  const supabaseAdmin = getAdminClient()
+  const { supabaseAdmin } = await verifyAdminUser()
 
   // 1. Delete from profiles
   const { error: profileError } = await supabaseAdmin
@@ -567,4 +514,3 @@ export async function removeStudent(studentId: string) {
   revalidatePath('/dashboard/admin')
   return { success: true }
 }
-

@@ -17,22 +17,38 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   useEffect(() => {
-    // Fetch initial session role
-    const getSession = async () => {
+    const syncRole = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.user_metadata?.role) {
-        setRole(session.user.user_metadata.role as Role)
+      if (session?.user) {
+        // First check profile table role
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
+        if (profile?.role) {
+          setRole(profile.role as Role)
+          return
+        }
+        if (session.user.user_metadata?.role) {
+          setRole(session.user.user_metadata.role as Role)
+          return
+        }
       }
+      setRole("student")
     }
     
-    getSession()
+    syncRole()
 
-    // Listen for auth state changes (e.g. login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user?.user_metadata?.role) {
-        setRole(session.user.user_metadata.role as Role)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data: profile }) => {
+          if (profile?.role) {
+            setRole(profile.role as Role)
+          } else if (session.user?.user_metadata?.role) {
+            setRole(session.user.user_metadata.role as Role)
+          } else {
+            setRole("student")
+          }
+        })
       } else {
-        setRole("student") // fallback
+        setRole("student")
       }
     })
 
