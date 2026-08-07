@@ -236,7 +236,6 @@ export default async function ProjectDetailPage({
                             currentXpAwarded={enrollment.xp_awarded}
                             currentNotes={enrollment.notes || ""}
                             maxXp={project.max_xp}
-                            onSaved={() => {}}
                           />
                         </TableCell>
                       </TableRow>

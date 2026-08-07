@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -24,7 +25,6 @@ interface ProgressDialogProps {
   currentXpAwarded: number
   currentNotes: string
   maxXp: number
-  onSaved: () => void
 }
 
 export function ProgressDialog({
@@ -36,8 +36,8 @@ export function ProgressDialog({
   currentXpAwarded,
   currentNotes,
   maxXp,
-  onSaved,
 }: ProgressDialogProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [progress, setProgress] = useState(currentProgress)
   const [isPending, startTransition] = useTransition()
@@ -50,13 +50,14 @@ export function ProgressDialog({
       try {
         await updateProjectProgress(formData)
         setOpen(false)
-        onSaved()
+        router.refresh()
       } catch (e: any) {
         console.error(e)
         alert(e?.message || "Failed to update progress")
       }
     })
   }
+
 
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setProgress(currentProgress) }}>
