@@ -13,7 +13,8 @@ import {
   BookOpen,
   LogOut,
   Sparkles,
-  CheckCircle
+  CheckCircle,
+  Layers
 } from "lucide-react"
 
 import {
@@ -35,6 +36,7 @@ const adminNav = [
   { name: "Students", url: "/dashboard/students", icon: Users, hasArrow: true },
   { name: "Assignments", url: "/dashboard/assignments", icon: FileText, hasArrow: true },
   { name: "Submissions", url: "/dashboard/assignments/submissions", icon: CheckCircle, hasArrow: true },
+  { name: "Projects", url: "/dashboard/projects", icon: Layers, hasArrow: true },
   { name: "Resources", url: "/dashboard/resources", icon: Folder, hasArrow: true },
   { name: "Quizzes", url: "/dashboard/quizzes", icon: ClipboardList, hasArrow: true },
   { name: "Leaderboard", url: "/dashboard/leaderboard", icon: Trophy, hasArrow: false },
@@ -44,6 +46,7 @@ const adminNav = [
 const studentNav = [
   { name: "Dashboard", url: "/dashboard", icon: Home, hasArrow: false },
   { name: "My Assignments", url: "/dashboard/assignments", icon: FileText, hasArrow: true },
+  { name: "My Projects", url: "/dashboard/projects", icon: Layers, hasArrow: true },
   { name: "Resources", url: "/dashboard/resources", icon: Folder, hasArrow: true },
   { name: "Quizzes", url: "/dashboard/quizzes", icon: ClipboardList, hasArrow: true },
   { name: "Leaderboard", url: "/dashboard/leaderboard", icon: Trophy, hasArrow: false },

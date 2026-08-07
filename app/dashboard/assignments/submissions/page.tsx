@@ -1,13 +1,20 @@
 import { createClient } from "@/utils/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Download, FileText, Users, CheckCircle, Clock, BarChart3 } from "lucide-react"
+import { Download, FileText, Users, CheckCircle, Clock } from "lucide-react"
 import Link from "next/link"
 import { SubmissionsFilter } from "./submissions-filter"
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  return createSupabaseClient(url, key)
+}
 
 export default async function SubmissionsOverviewPage({
   searchParams,
@@ -17,7 +24,7 @@ export default async function SubmissionsOverviewPage({
   const supabase = await createClient()
   const resolvedParams = await searchParams
 
-  // Auth + admin guard
+  // Auth + admin guard (use user client for auth check)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -31,14 +38,17 @@ export default async function SubmissionsOverviewPage({
 
   if (profile?.role !== "admin") redirect("/dashboard")
 
+  // Use admin client to bypass RLS for data fetching
+  const supabaseAdmin = getAdminClient()
+
   // Fetch all assignments for the filter dropdown
-  const { data: assignments } = await supabase
+  const { data: assignments } = await supabaseAdmin
     .from("assignments")
     .select("id, title")
     .order("due_date", { ascending: false })
 
-  // Build submissions query — filter by assignment if selected
-  let submissionsQuery = supabase
+  // Build submissions query — note: profiles has no 'email' column, only full_name
+  let submissionsQuery = supabaseAdmin
     .from("submissions")
     .select(
       `
@@ -49,7 +59,7 @@ export default async function SubmissionsOverviewPage({
       file_url,
       assignment_id,
       student_id,
-      profiles (full_name, email),
+      profiles (full_name),
       assignments (title, due_date)
     `
     )
@@ -199,11 +209,6 @@ export default async function SubmissionsOverviewPage({
                             <p className="text-sm font-medium leading-none">
                               {profile?.full_name || "Unknown Student"}
                             </p>
-                            {profile?.email && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {profile.email}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </TableCell>

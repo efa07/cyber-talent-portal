@@ -529,3 +529,125 @@ export async function removeStudent(studentId: string) {
   revalidatePath('/dashboard/admin')
   return { success: true }
 }
+
+export async function createProject(formData: FormData) {
+  const { user, supabaseAdmin } = await verifyAdminUser()
+
+  const title = formData.get('title') as string
+  const description = formData.get('description') as string
+  const maxXp = parseInt(formData.get('max_xp') as string, 10) || 100
+  const autoEnroll = formData.get('auto_enroll') === 'on'
+
+  if (!title || !description) throw new Error('Missing required fields')
+
+  const { data: project, error } = await supabaseAdmin
+    .from('projects')
+    .insert({ title, description, max_xp: maxXp, instructor_id: user.id })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating project:', error)
+    throw new Error(`Failed to create project: ${error.message}`)
+  }
+
+  // Auto-enroll all existing students if requested
+  if (autoEnroll) {
+    const { data: students } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('role', 'student')
+
+    if (students && students.length > 0) {
+      const enrollments = students.map(s => ({
+        project_id: project.id,
+        student_id: s.id,
+        progress: 0,
+        xp_awarded: 0,
+      }))
+      await supabaseAdmin.from('project_enrollments').insert(enrollments)
+    }
+  }
+
+  revalidatePath('/dashboard/projects')
+  return { success: true, projectId: project.id }
+}
+
+export async function updateProjectProgress(formData: FormData) {
+  const { supabaseAdmin } = await verifyAdminUser()
+
+  const enrollmentId = formData.get('enrollment_id') as string
+  const studentId = formData.get('student_id') as string
+  const projectId = formData.get('project_id') as string
+  const progress = parseInt(formData.get('progress') as string, 10)
+  const notes = (formData.get('notes') as string) || ''
+  const maxXp = parseInt(formData.get('max_xp') as string, 10) || 100
+
+  if (!enrollmentId || !studentId || isNaN(progress)) {
+    throw new Error('Missing required fields')
+  }
+
+  // Fetch current enrollment to compute XP delta
+  const { data: enrollment } = await supabaseAdmin
+    .from('project_enrollments')
+    .select('xp_awarded')
+    .eq('id', enrollmentId)
+    .single()
+
+  const currentXpAwarded = enrollment?.xp_awarded || 0
+  const newXpForProject = Math.floor((progress / 100) * maxXp)
+  const delta = newXpForProject - currentXpAwarded
+
+  // Update enrollment
+  const { error: enrollError } = await supabaseAdmin
+    .from('project_enrollments')
+    .update({
+      progress,
+      xp_awarded: newXpForProject,
+      notes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', enrollmentId)
+
+  if (enrollError) {
+    console.error('Error updating enrollment:', enrollError)
+    throw new Error(`Failed to update progress: ${enrollError.message}`)
+  }
+
+  // Award XP delta to student profile (only if positive — never revoke)
+  if (delta > 0) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('xp')
+      .eq('id', studentId)
+      .single()
+
+    if (profile) {
+      await supabaseAdmin
+        .from('profiles')
+        .update({ xp: profile.xp + delta })
+        .eq('id', studentId)
+    }
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`)
+  revalidatePath('/dashboard/leaderboard')
+  revalidatePath('/dashboard/admin')
+  return { success: true, xpAwarded: delta > 0 ? delta : 0 }
+}
+
+export async function enrollStudentInProject(projectId: string, studentId: string) {
+  const { supabaseAdmin } = await verifyAdminUser()
+
+  const { error } = await supabaseAdmin
+    .from('project_enrollments')
+    .insert({ project_id: projectId, student_id: studentId, progress: 0, xp_awarded: 0 })
+
+  if (error) {
+    console.error('Error enrolling student:', error)
+    throw new Error(`Failed to enroll student: ${error.message}`)
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`)
+  return { success: true }
+}
