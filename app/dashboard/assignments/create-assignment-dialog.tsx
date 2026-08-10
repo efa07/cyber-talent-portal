@@ -67,8 +67,8 @@ export function CreateAssignmentDialog() {
               <Textarea id="description" name="description" required placeholder="Describe the assignment, requirements, and grading rubric." className="h-36" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="file">Upload Assignment (PDF)</Label>
-              <Input id="file" name="file" type="file" accept=".pdf" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
+              <Label htmlFor="file">Upload Assignment (PDF or ZIP)</Label>
+              <Input id="file" name="file" type="file" accept=".pdf,.zip,application/zip,application/x-zip-compressed" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
             </div>
           </div>
           <DialogFooter>

@@ -10,6 +10,20 @@ function getAdminClient() {
   return createSupabaseClient(url, key)
 }
 
+function getUploadContentType(file: File) {
+  const name = file.name.toLowerCase()
+
+  if (name.endsWith('.zip') || name.endsWith('.gz') || name.endsWith('.tar')) {
+    return 'application/zip'
+  }
+
+  if (name.endsWith('.pdf')) {
+    return 'application/pdf'
+  }
+
+  return file.type || 'application/octet-stream'
+}
+
 async function verifyAdminUser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -45,7 +59,7 @@ export async function createAssignment(formData: FormData) {
       
       const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
         upsert: true,
-        contentType: file.type || 'application/octet-stream'
+        contentType: getUploadContentType(file)
       })
 
       if (uploadError) {
@@ -96,7 +110,7 @@ export async function updateAssignment(formData: FormData) {
       
       const { error: uploadError } = await supabaseAdmin.storage.from('assignments').upload(filePath, fileBuffer, {
         upsert: true,
-        contentType: file.type || 'application/octet-stream'
+        contentType: getUploadContentType(file)
       })
 
       if (uploadError) {
@@ -172,7 +186,7 @@ export async function createResource(formData: FormData) {
       
       const { error: uploadError } = await supabaseAdmin.storage.from('resources').upload(filePath, fileBuffer, {
         upsert: true,
-        contentType: file.type || 'application/octet-stream'
+        contentType: getUploadContentType(file)
       })
 
       if (uploadError) {
@@ -294,7 +308,7 @@ export async function submitAssignment(formData: FormData) {
     
     const { error: uploadError } = await supabaseAdmin.storage.from('submissions').upload(filePath, fileBuffer, {
       upsert: true,
-      contentType: file.type || 'application/octet-stream'
+      contentType: getUploadContentType(file)
     })
 
     if (uploadError) {

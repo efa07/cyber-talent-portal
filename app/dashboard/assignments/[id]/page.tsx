@@ -335,7 +335,7 @@ function StudentSubmissionForm({ assignmentId, onSubmitted }: { assignmentId: st
       <input type="hidden" name="assignment_id" value={assignmentId} />
       <div className="space-y-2">
         <label htmlFor="file" className="text-sm font-medium">Upload File (HTML, CSS, PDF, ZIP)</label>
-        <Input id="file" name="file" type="file" required accept=".html,.css,.pdf,.zip" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
+        <Input id="file" name="file" type="file" required accept=".html,.css,.pdf,.zip,application/zip,application/x-zip-compressed" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
       </div>
       <Button type="submit" disabled={isPending} className="w-full">
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -388,7 +388,7 @@ function EditAssignmentDialog({ assignment, onSaved }: { assignment: any, onSave
             </div>
             <div className="space-y-2">
               <label htmlFor="file">Replace Attachment (optional)</label>
-              <Input id="file" name="file" type="file" accept=".pdf,.zip" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
+              <Input id="file" name="file" type="file" accept=".pdf,.zip,application/zip,application/x-zip-compressed" className="cursor-pointer file:text-violet-600 file:bg-violet-50 file:border-0 file:rounded-md file:px-4 file:py-1 file:mr-4 file:font-medium hover:file:bg-violet-100 transition-colors" />
             </div>
           </div>
           <DialogFooter>
