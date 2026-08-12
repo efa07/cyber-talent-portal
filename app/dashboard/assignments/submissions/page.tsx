@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient, createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,12 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Download, FileText, Users, CheckCircle, Clock } from "lucide-react"
 import Link from "next/link"
 import { SubmissionsFilter } from "./submissions-filter"
-
-function getAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  return createSupabaseClient(url, key)
-}
 
 export default async function SubmissionsOverviewPage({
   searchParams,
@@ -39,7 +32,7 @@ export default async function SubmissionsOverviewPage({
   if (profile?.role !== "admin") redirect("/dashboard")
 
   // Use admin client to bypass RLS for data fetching
-  const supabaseAdmin = getAdminClient()
+  const supabaseAdmin = createAdminClient()
 
   // Fetch all assignments for the filter dropdown
   const { data: assignments } = await supabaseAdmin

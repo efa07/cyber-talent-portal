@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient, createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,13 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Layers, Users, Zap, TrendingUp, CheckCircle } from "lucide-react"
 import { ProgressDialog } from "./progress-dialog"
 import { EnrollMissingStudents } from "./enroll-missing"
-
-function getAdminClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 function getInitials(name: string) {
   if (!name) return "ST"
@@ -36,7 +28,7 @@ export default async function ProjectDetailPage({
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
   const role = profile?.role || "student"
-  const supabaseAdmin = getAdminClient()
+  const supabaseAdmin = createAdminClient()
 
   // Fetch project
   const { data: project } = await supabaseAdmin

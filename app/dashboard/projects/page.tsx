@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient, createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,13 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Layers, Users, Zap, ChevronRight, ArrowRight } from "lucide-react"
 import { CreateProjectDialog } from "./create-project-dialog"
-
-function getAdminClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 export default async function ProjectsPage() {
   const supabase = await createClient()
@@ -28,7 +20,7 @@ export default async function ProjectsPage() {
     .single()
 
   const role = profile?.role || "student"
-  const supabaseAdmin = getAdminClient()
+  const supabaseAdmin = createAdminClient()
 
   if (role === "admin") {
     // Admin: fetch all projects with enrollment stats

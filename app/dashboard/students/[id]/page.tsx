@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createAdminClient, createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,13 +9,6 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Award, BookOpen, Clock, Mail, Shield, Star, Trophy } from "lucide-react"
 import { XpAdjustForm } from "../xp-adjust-form"
-
-function getAdminClient() {
-  return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
 
 function getInitials(name: string) {
   if (!name) return "ST"
@@ -32,7 +24,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
   const role = profile?.role || "student"
-  const supabaseAdmin = getAdminClient()
+  const supabaseAdmin = createAdminClient()
 
   const { data: student } = await supabaseAdmin.from("profiles").select("*").eq("id", id).single()
   if (!student) redirect("/dashboard/students")
