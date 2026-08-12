@@ -80,6 +80,13 @@ export function StudentActionsDropdown({ studentId }: { studentId: string }) {
           </DropdownMenuItem>
           <DropdownMenuItem
             render={
+              <Link href={`/dashboard/students/${studentId}#xp-management`}>
+                <Edit className="mr-2 h-4 w-4" /> Manage XP
+              </Link>
+            }
+          />
+          <DropdownMenuItem
+            render={
               <Link href={`/dashboard/students/${studentId}`}>
                 <Edit className="mr-2 h-4 w-4" /> Edit Details
               </Link>

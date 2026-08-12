@@ -1,46 +1,82 @@
+import { createClient } from "@/utils/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { redirect } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Award, BookOpen, Clock, Mail, Shield, Star, Trophy } from "lucide-react"
-import Link from "next/link"
+import { XpAdjustForm } from "./xp-adjust-form"
 
-// Mock data for a specific student
-const student = {
-  id: "1",
-  name: "Emma Watson",
-  email: "emma.w@example.com",
-  joined: "Sep 2025",
-  rank: 1,
-  xp: 2450,
-  stars: 14,
-  status: "Active",
-  initials: "EW",
-  avatar: "/avatars/01.png",
-  bio: "Aspiring Penetration Tester. Love CTFs and web app security.",
-  stats: {
-    modulesCompleted: 8,
-    totalModules: 12,
-    assignmentsSubmitted: 15,
-    averageScore: 92,
-  },
-  recentActivity: [
-    { id: 1, action: "Completed Module", target: "Network Reconnaissance", time: "2 days ago" },
-    { id: 2, action: "Earned Badge", target: "First Blood (Web Auth)", time: "5 days ago" },
-    { id: 3, action: "Submitted Assignment", target: "SQL Injection Lab", time: "1 week ago" },
-  ],
-  skills: [
-    { name: "Web Application Security", progress: 85 },
-    { name: "Network Penetration", progress: 60 },
-    { name: "Cryptography", progress: 40 },
-  ]
+function getAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+function getInitials(name: string) {
+  if (!name) return "ST"
+  return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
 }
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
-  
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+  const role = profile?.role || "student"
+  const supabaseAdmin = getAdminClient()
+
+  const { data: student } = await supabaseAdmin.from("profiles").select("*").eq("id", id).single()
+  if (!student) redirect("/dashboard/students")
+
+  const { count: higherCount } = await supabaseAdmin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "student")
+    .gt("xp", student.xp || 0)
+
+  const rank = (higherCount || 0) + 1
+  const joined = student.created_at
+    ? new Date(student.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })
+    : "Unknown"
+
+  const studentData = {
+    id: student.id,
+    fullName: student.full_name || "Student",
+    email: student.email || "No email available",
+    joined,
+    rank,
+    xp: student.xp || 0,
+    stars: student.stars || 0,
+    status: "Active",
+    initials: getInitials(student.full_name),
+    bio: "A great student working through the cyber talent program.",
+    stats: {
+      modulesCompleted: 8,
+      totalModules: 12,
+      assignmentsSubmitted: 15,
+      averageScore: 92,
+    },
+    recentActivity: [
+      { id: 1, action: "Completed Module", target: "Network Reconnaissance", time: "2 days ago" },
+      { id: 2, action: "Earned Badge", target: "First Blood (Web Auth)", time: "5 days ago" },
+      { id: 3, action: "Submitted Assignment", target: "SQL Injection Lab", time: "1 week ago" },
+    ],
+    skills: [
+      { name: "Web Application Security", progress: 85 },
+      { name: "Network Penetration", progress: 60 },
+      { name: "Cryptography", progress: 40 },
+    ],
+  }
+
   return (
     <div className="flex-1 space-y-6">
       <div className="flex items-center gap-4">
@@ -61,18 +97,17 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           <CardHeader className="text-center pb-2">
             <div className="flex justify-center mb-4">
               <Avatar className="h-24 w-24 border-4 border-muted">
-                <AvatarImage src={student.avatar} alt={student.name} />
-                <AvatarFallback className="text-2xl">{student.initials}</AvatarFallback>
+                <AvatarFallback className="text-2xl">{studentData.initials}</AvatarFallback>
               </Avatar>
             </div>
-            <CardTitle className="text-2xl">{student.name}</CardTitle>
-            <CardDescription>{student.bio}</CardDescription>
+            <CardTitle className="text-2xl">{studentData.fullName}</CardTitle>
+            <CardDescription>{studentData.bio}</CardDescription>
             <div className="flex items-center justify-center gap-2 mt-2">
-              <Badge variant={student.status === "Active" ? "default" : "secondary"}>
-                {student.status}
+              <Badge variant={studentData.status === "Active" ? "default" : "secondary"}>
+                {studentData.status}
               </Badge>
               <Badge variant="outline" className="gap-1">
-                <Trophy className="h-3 w-3 text-yellow-500" /> Rank #{student.rank}
+                <Trophy className="h-3 w-3 text-yellow-500" /> Rank #{studentData.rank}
               </Badge>
             </div>
           </CardHeader>
@@ -80,28 +115,40 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{student.email}</span>
+                <span>{studentData.email}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span>Joined {student.joined}</span>
+                <span>Joined {studentData.joined}</span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <div className="text-center">
-                <div className="text-2xl font-bold font-mono">{student.xp.toLocaleString()}</div>
+                <div className="text-2xl font-bold font-mono">{studentData.xp.toLocaleString()}</div>
                 <div className="text-xs text-muted-foreground">Total XP</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold flex items-center justify-center gap-1">
-                  {student.stars} <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                  {studentData.stars} <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                 </div>
                 <div className="text-xs text-muted-foreground">Stars Earned</div>
               </div>
             </div>
 
             <Button className="w-full">Message Student</Button>
+
+            {role === "admin" && (
+              <Card id="xp-management" className="border border-border bg-muted/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Admin XP Controls</CardTitle>
+                  <CardDescription>Adjust the student's XP balance directly.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <XpAdjustForm studentId={id} currentXp={studentData.xp} />
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
 
@@ -114,7 +161,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 <CardTitle className="text-sm font-medium text-muted-foreground">Modules Completed</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{student.stats.modulesCompleted}/{student.stats.totalModules}</div>
+                <div className="text-2xl font-bold">{studentData.stats.modulesCompleted}/{studentData.stats.totalModules}</div>
               </CardContent>
             </Card>
             <Card>
@@ -122,7 +169,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 <CardTitle className="text-sm font-medium text-muted-foreground">Assignments</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{student.stats.assignmentsSubmitted}</div>
+                <div className="text-2xl font-bold">{studentData.stats.assignmentsSubmitted}</div>
               </CardContent>
             </Card>
             <Card>
@@ -130,7 +177,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Score</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-500">{student.stats.averageScore}%</div>
+                <div className="text-2xl font-bold text-emerald-500">{studentData.stats.averageScore}%</div>
               </CardContent>
             </Card>
           </div>
@@ -140,7 +187,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
               <TabsTrigger value="progress">Learning Progress</TabsTrigger>
               <TabsTrigger value="activity">Recent Activity</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="progress" className="mt-4 space-y-4">
               <Card>
                 <CardHeader>
@@ -148,7 +195,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                   <CardDescription>Current proficiency across different domains.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {student.skills.map((skill, index) => (
+                  {studentData.skills.map((skill, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-medium flex items-center gap-2">
@@ -172,20 +219,16 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-8">
-                    {student.recentActivity.map((activity) => (
+                    {studentData.recentActivity.map((activity) => (
                       <div key={activity.id} className="flex items-center">
                         <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
                           <Clock className="h-4 w-4" />
                         </span>
                         <div className="ml-4 space-y-1">
                           <p className="text-sm font-medium leading-none">{activity.action}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {activity.target}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{activity.target}</p>
                         </div>
-                        <div className="ml-auto text-xs text-muted-foreground">
-                          {activity.time}
-                        </div>
+                        <div className="ml-auto text-xs text-muted-foreground">{activity.time}</div>
                       </div>
                     ))}
                   </div>

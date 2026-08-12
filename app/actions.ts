@@ -518,6 +518,34 @@ export async function awardStar(studentId: string) {
   return { success: true }
 }
 
+export async function updateStudentXp(formData: FormData) {
+  const { supabaseAdmin } = await verifyAdminUser()
+
+  const studentId = formData.get('student_id') as string
+  const xpChange = parseInt(formData.get('xp_change') as string, 10)
+
+  if (!studentId || Number.isNaN(xpChange)) {
+    throw new Error('Invalid student or XP amount.')
+  }
+
+  const { data: profile } = await supabaseAdmin.from('profiles').select('xp').eq('id', studentId).single()
+  const currentXp = profile?.xp || 0
+  const updatedXp = Math.max(0, currentXp + xpChange)
+
+  const { error } = await supabaseAdmin.from('profiles').update({ xp: updatedXp }).eq('id', studentId)
+
+  if (error) {
+    console.error('Error updating student XP:', error)
+    throw new Error(`Failed to update student XP: ${error.message}`)
+  }
+
+  revalidatePath('/dashboard/students')
+  revalidatePath(`/dashboard/students/${studentId}`)
+  revalidatePath('/dashboard/leaderboard')
+  revalidatePath('/dashboard/admin')
+  return { success: true, xp: updatedXp }
+}
+
 export async function removeStudent(studentId: string) {
   const { supabaseAdmin } = await verifyAdminUser()
 
