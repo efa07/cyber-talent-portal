@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Award, BookOpen, Clock, Mail, Shield, Star, Trophy } from "lucide-react"
-import { XpAdjustForm } from "./xp-adjust-form"
+import { XpAdjustForm } from "../xp-adjust-form"
 
 function getAdminClient() {
   return createSupabaseClient(
